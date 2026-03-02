@@ -7,7 +7,7 @@ requires-python = ">=3.14"
 dependencies = [
     "markdown-it-py>=3.0",
     "mdit-py-plugins>=0.4",
-    "ruamel.yaml>=0.18",
+    "ruamel-yaml>=0.18",
     "click>=8.0",
 ]
 
@@ -29,4 +29,18 @@ pythonpath = ["src"]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
+    "ruff>=0.9",
+    "mypy>=1.15",
 ]
+
+[tool.ruff]
+src = ["src"]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+mypy_path = "src"
+strict = true
+ignore_missing_imports = true
