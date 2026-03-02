@@ -330,6 +330,118 @@ class TestFigure:
         assert "dall-e-3" in result
 
 
+# ── Phase 3 Task 4: Nested lists (嵌套列表) ────────────────────────
+
+
+class TestNestedList:
+    """Nested list rendering tests (嵌套列表渲染测试)."""
+
+    def test_nested_unordered_list(self) -> None:
+        """嵌套无序列表缩进 (Nested unordered list is indented)."""
+        inner = List(
+            ordered=False,
+            children=[
+                ListItem(children=[Paragraph(children=[Text(content="nested")])])
+            ],
+        )
+        outer = List(
+            ordered=False,
+            children=[
+                ListItem(children=[
+                    Paragraph(children=[Text(content="top")]),
+                    inner,
+                ])
+            ],
+        )
+        result = render(doc(outer))
+        lines = result.strip().split("\n")
+        # 顶级项无缩进 (Top-level item has no indent)
+        assert lines[0].startswith("- top")
+        # 嵌套项有缩进 (Nested item is indented)
+        nested_line = [ln for ln in lines if "nested" in ln][0]
+        assert nested_line.startswith("  - ")
+
+    def test_nested_ordered_list(self) -> None:
+        """嵌套有序列表缩进 (Nested ordered list is indented)."""
+        inner = List(
+            ordered=True,
+            children=[
+                ListItem(children=[Paragraph(children=[Text(content="sub")])])
+            ],
+        )
+        outer = List(
+            ordered=True,
+            children=[
+                ListItem(children=[
+                    Paragraph(children=[Text(content="main")]),
+                    inner,
+                ])
+            ],
+        )
+        result = render(doc(outer))
+        lines = result.strip().split("\n")
+        assert lines[0].startswith("1. main")
+        nested_line = [ln for ln in lines if "sub" in ln][0]
+        assert nested_line.startswith("  ")
+
+    def test_deeply_nested_list(self) -> None:
+        """深层嵌套列表 (Deeply nested list has increasing indent)."""
+        l3 = List(ordered=False, children=[
+            ListItem(children=[Paragraph(children=[Text(content="deep")])])
+        ])
+        l2 = List(ordered=False, children=[
+            ListItem(children=[
+                Paragraph(children=[Text(content="mid")]),
+                l3,
+            ])
+        ])
+        l1 = List(ordered=False, children=[
+            ListItem(children=[
+                Paragraph(children=[Text(content="top")]),
+                l2,
+            ])
+        ])
+        result = render(doc(l1))
+        lines = result.strip().split("\n")
+        deep_line = [ln for ln in lines if "deep" in ln][0]
+        # 第三层应有 4 个空格缩进 (Level 3 should have 4-space indent)
+        assert deep_line.startswith("    - ")
+
+    def test_mixed_ordered_unordered_nesting(self) -> None:
+        """混合有序无序嵌套 (Mixed ordered inside unordered)."""
+        inner = List(
+            ordered=True,
+            children=[
+                ListItem(children=[Paragraph(children=[Text(content="sub1")])]),
+                ListItem(children=[Paragraph(children=[Text(content="sub2")])]),
+            ],
+        )
+        outer = List(
+            ordered=False,
+            children=[
+                ListItem(children=[
+                    Paragraph(children=[Text(content="top")]),
+                    inner,
+                ])
+            ],
+        )
+        result = render(doc(outer))
+        assert "- top" in result
+        # 嵌套有序列表缩进 (Nested ordered list indented)
+        assert "  1." in result
+
+    def test_list_item_with_code_block(self) -> None:
+        """列表项含代码块 (List item with code block, indent preserved)."""
+        item = ListItem(children=[
+            Paragraph(children=[Text(content="example:")]),
+            CodeBlock(content="x = 1", language="python"),
+        ])
+        lst = List(ordered=False, children=[item])
+        result = render(doc(lst))
+        assert "- example:" in result
+        assert "```python" in result
+
+
 # ── Task 5: Table (表) ──────────────────────────────────────────
 
 

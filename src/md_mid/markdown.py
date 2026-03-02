@@ -76,6 +76,7 @@ class MarkdownRenderer:
         self._index: MarkdownIndex = MarkdownIndex()
         self._fig_count: int = 0  # 图计数器 (figure counter)
         self._tab_count: int = 0  # 表计数器 (table counter)
+        self._list_depth: int = 0  # 列表嵌套深度 (list nesting depth)
 
     def render(self, doc: Document) -> str:
         """渲染文档为 Rich Markdown (Render document to Rich Markdown).
@@ -89,6 +90,7 @@ class MarkdownRenderer:
         # 重置计数器 (Reset counters for fresh render)
         self._fig_count = 0
         self._tab_count = 0
+        self._list_depth = 0
 
         # Pass 1: 收集引用键 (Collect citation keys)
         self._index = self._build_index(doc)
@@ -226,14 +228,25 @@ class MarkdownRenderer:
         return "\n".join(f"> {line}" for line in lines) + "\n\n"
 
     def _render_list(self, node: Node) -> str:
-        """列表渲染 (List rendering)."""
+        """列表渲染，支持嵌套缩进 (List rendering with nesting indentation)."""
         lst = cast(List, node)
+        indent = "  " * self._list_depth
         parts: list[str] = []
+        self._list_depth += 1
         for i, item in enumerate(lst.children, start=lst.start):
             marker = f"{i}." if lst.ordered else "-"
-            content = self._dispatch(item).strip()
-            parts.append(f"{marker} {content}")
+            content = self._render_list_item_content(item)
+            parts.append(f"{indent}{marker} {content}")
+        self._list_depth -= 1
         return "\n".join(parts) + "\n\n"
+
+    def _render_list_item_content(self, node: Node) -> str:
+        """列表项内容渲染，嵌套子内容缩进 (List item content with nested indentation)."""
+        parts: list[str] = []
+        for child in node.children:
+            rendered = self._dispatch(child)
+            parts.append(rendered)
+        return "".join(parts).strip()
 
     def _render_list_item(self, node: Node) -> str:
         """列表项渲染 (List item rendering)."""
