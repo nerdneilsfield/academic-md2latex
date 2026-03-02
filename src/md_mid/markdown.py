@@ -51,6 +51,13 @@ class MarkdownIndex:
     cite_keys: list[str] = field(default_factory=list)
 
 
+# 标签本地化 (Label localization)
+_LABEL_STRINGS: dict[str, dict[str, str]] = {
+    "zh": {"figure": "图", "table": "表"},
+    "en": {"figure": "Figure", "table": "Table"},
+}
+
+
 class MarkdownRenderer:
     """EAST → Rich Markdown 渲染器 (EAST to Rich Markdown renderer)."""
 
@@ -58,6 +65,7 @@ class MarkdownRenderer:
         self,
         bib: dict[str, str] | None = None,
         heading_id_style: str = "attr",
+        locale: str = "zh",
         diag: DiagCollector | None = None,
     ) -> None:
         """初始化渲染器 (Initialize renderer).
@@ -68,10 +76,13 @@ class MarkdownRenderer:
             heading_id_style: Anchor style for headings:
                 'attr' ({#id}) or 'html' (<hN id=...>)
                 (标题锚点风格)
+            locale: Label language: 'zh' or 'en' (标签语言)
             diag: Optional diagnostic collector (可选诊断收集器)
         """
         self._bib = bib or {}
         self._heading_id_style = heading_id_style
+        self._locale = locale
+        self._labels = _LABEL_STRINGS.get(locale, _LABEL_STRINGS["zh"])
         self._diag = diag or DiagCollector("unknown")
         self._index: MarkdownIndex = MarkdownIndex()
         self._fig_count: int = 0  # 图计数器 (figure counter)
@@ -302,14 +313,15 @@ class MarkdownRenderer:
             f'  <img src="{_esc(src)}" alt="{_esc(alt)}"'
             ' style="max-width:100%">',
         ]
+        fig_label = self._labels["figure"]
         if caption:
             lines.append(
-                f"  <figcaption><strong>图 {n}</strong>"
+                f"  <figcaption><strong>{fig_label} {n}</strong>"
                 f": {_esc(caption)}</figcaption>"
             )
         else:
             lines.append(
-                f"  <figcaption><strong>图 {n}</strong>"
+                f"  <figcaption><strong>{fig_label} {n}</strong>"
                 "</figcaption>"
             )
 
@@ -376,14 +388,15 @@ class MarkdownRenderer:
             "    </tbody>",
             "  </table>",
         ]
+        tab_label = self._labels["table"]
         if caption:
             lines.append(
-                f"  <figcaption><strong>表 {n}</strong>"
+                f"  <figcaption><strong>{tab_label} {n}</strong>"
                 f": {_esc(caption)}</figcaption>"
             )
         else:
             lines.append(
-                f"  <figcaption><strong>表 {n}</strong>"
+                f"  <figcaption><strong>{tab_label} {n}</strong>"
                 "</figcaption>"
             )
         lines.append("</figure>")

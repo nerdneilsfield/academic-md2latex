@@ -37,6 +37,11 @@ from md_mid.parser import parse
     type=click.Choice(["attr", "html"]),
     default="attr",
 )
+@click.option(
+    "--locale",
+    type=click.Choice(["zh", "en"]),
+    default="zh",
+)
 @click.version_option(version=__version__)
 def main(
     input: Path,
@@ -48,6 +53,7 @@ def main(
     dump_east: bool,
     bib_path: Path | None,
     heading_id_style: str,
+    locale: str,
 ) -> None:
     """md-mid: 学术写作中间格式转换工具"""
     text = input.read_text(encoding="utf-8")
@@ -91,6 +97,7 @@ def main(
         renderer_md = MarkdownRenderer(
             bib=bib,
             heading_id_style=heading_id_style,
+            locale=locale,
             diag=diag,
         )
         result = renderer_md.render(east)

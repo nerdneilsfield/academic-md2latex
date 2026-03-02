@@ -169,3 +169,21 @@ def test_markdown_with_invalid_bib_no_crash(tmp_path) -> None:
         main, [str(src), "-t", "markdown", "--bib", str(bib), "-o", str(out)]
     )
     assert result.exit_code == 0
+
+
+# ── Phase 3 Task 5: --locale CLI option ──────────────────────────────────────
+
+
+def test_markdown_locale_english(tmp_path) -> None:
+    """--locale en 使用英文标签 (--locale en uses English labels)."""
+    src = tmp_path / "t.mid.md"
+    src.write_text(
+        "![x](a.png)\n<!-- caption: Cap -->\n"
+    )
+    out = tmp_path / "out.rendered.md"
+    result = CliRunner().invoke(
+        main, [str(src), "-t", "markdown", "--locale", "en", "-o", str(out)]
+    )
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert "Figure 1" in content

@@ -558,6 +558,49 @@ class TestTableRichCells:
         assert "<script>" not in result
 
 
+# ── Phase 3 Task 5: Locale labels (标签本地化) ─────────────────────
+
+
+class TestLocale:
+    """Locale label rendering tests (标签本地化渲染测试)."""
+
+    def test_english_figure_label(self) -> None:
+        """英文图标签 (English figure label: Figure N)."""
+        f = Figure(src="a.png", alt="x")
+        f.metadata["caption"] = "Cap"
+        result = MarkdownRenderer(locale="en").render(doc(f))
+        assert "Figure 1" in result
+
+    def test_english_table_label(self) -> None:
+        """英文表标签 (English table label: Table N)."""
+        t = Table(
+            headers=_cells("H"),
+            alignments=["left"],
+            rows=_rows(["V"]),
+        )
+        t.metadata["caption"] = "Cap"
+        result = MarkdownRenderer(locale="en").render(doc(t))
+        assert "Table 1" in result
+
+    def test_chinese_is_default(self) -> None:
+        """默认中文标签 (Default locale is Chinese)."""
+        f = Figure(src="a.png", alt="x")
+        f.metadata["caption"] = "Cap"
+        result = render(doc(f))
+        assert "图 1" in result
+
+    def test_explicit_chinese_locale(self) -> None:
+        """显式中文标签 (Explicit zh locale)."""
+        t = Table(
+            headers=_cells("H"),
+            alignments=["left"],
+            rows=_rows(["V"]),
+        )
+        t.metadata["caption"] = "Cap"
+        result = MarkdownRenderer(locale="zh").render(doc(t))
+        assert "表 1" in result
+
+
 # ── Task 6: RawBlock + FrontMatter (原始块和前言) ────────────────
 
 
