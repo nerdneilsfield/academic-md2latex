@@ -11,7 +11,7 @@ import html as _html
 from dataclasses import dataclass, field
 from typing import cast
 
-from md_mid.diagnostic import DiagCollector
+from md_mid.diagnostic import DiagCollector, Position
 from md_mid.nodes import (
     Citation,
     CodeBlock,
@@ -129,9 +129,19 @@ class MarkdownRenderer:
         method_name = f"_render_{node.type}"
         method = getattr(self, method_name, None)
         if method is None:
+            # 从节点提取位置信息 (Extract position from node for diagnostic)
+            pos: Position | None = None
+            if node.position and isinstance(node.position, dict):
+                start = node.position.get("start", {})
+                if isinstance(start, dict):
+                    pos = Position(
+                        line=int(start.get("line", 0)),
+                        column=int(start.get("column", 1)),
+                    )
             self._diag.warning(
                 f"Unhandled node type '{node.type}',"
-                " rendering children only"
+                " rendering children only",
+                pos,
             )
             return self._render_children(node)
         result: str = method(node)

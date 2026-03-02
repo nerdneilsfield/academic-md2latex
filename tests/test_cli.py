@@ -153,3 +153,19 @@ def test_markdown_with_bib_file(tmp_path) -> None:
     content = out.read_text()
     assert "Wang" in content
     assert "Registration" in content
+
+
+# ── Task 4 (M2): Bad .bib file handling (无效 bib 文件处理) ────────────────────
+
+
+def test_markdown_with_invalid_bib_no_crash(tmp_path) -> None:
+    """无效 bib 不崩溃 (Invalid .bib produces warning, no crash)."""
+    src = tmp_path / "t.mid.md"
+    src.write_text("[W](cite:w) hello.\n")
+    bib = tmp_path / "bad.bib"
+    bib.write_bytes(b"\xff\xfe bad \x80")
+    out = tmp_path / "out.rendered.md"
+    result = CliRunner().invoke(
+        main, [str(src), "-t", "markdown", "--bib", str(bib), "-o", str(out)]
+    )
+    assert result.exit_code == 0

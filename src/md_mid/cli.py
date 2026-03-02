@@ -81,7 +81,13 @@ def main(
         if bib_path is not None:
             from md_mid.bibtex import parse_bib
 
-            bib = parse_bib(bib_path.read_text(encoding="utf-8"))
+            # 优雅处理无效 bib 文件 (Gracefully handle invalid .bib files)
+            try:
+                bib = parse_bib(bib_path.read_text(encoding="utf-8"))
+            except Exception as exc:
+                click.echo(
+                    f"[WARNING] Failed to parse {bib_path}: {exc}", err=True
+                )
         renderer_md = MarkdownRenderer(
             bib=bib,
             heading_id_style=heading_id_style,

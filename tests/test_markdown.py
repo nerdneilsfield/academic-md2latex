@@ -15,6 +15,7 @@ from md_mid.nodes import (
     ListItem,
     MathBlock,
     MathInline,
+    Node,
     Paragraph,
     RawBlock,
     SoftBreak,
@@ -476,3 +477,27 @@ class TestHtmlEscaping:
         r = CrossRef(label="fig:a", display_text="A & B")
         result = render(doc(Paragraph(children=[r])))
         assert "A &amp; B" in result
+
+
+# ── Task 4 (M3): Unhandled node warning includes position (未处理节点警告含位置) ─
+
+
+class TestUnhandledNodeWarning:
+    """Unhandled node type warning position tests (未处理节点警告位置测试)."""
+
+    def test_unhandled_node_warning_has_position(self) -> None:
+        """未处理节点警告含位置 (Unhandled node warning includes position)."""
+        from md_mid.diagnostic import DiagCollector
+
+        class FakeNode(Node):
+            @property
+            def type(self) -> str:
+                return "fake_type"
+
+        dc = DiagCollector("test")
+        n = FakeNode(position={"start": {"line": 42, "column": 5}})
+        d = Document(children=[n])
+        MarkdownRenderer(diag=dc).render(d)
+        assert len(dc.warnings) == 1
+        assert dc.warnings[0].position is not None
+        assert dc.warnings[0].position.line == 42
