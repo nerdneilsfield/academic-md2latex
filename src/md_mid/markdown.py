@@ -150,7 +150,13 @@ class MarkdownRenderer:
         for key in keys:
             val = doc.metadata.get(key)
             if val is not None:
-                lines.append(f"{key}: {val}")
+                val_str = str(val)
+                if "\n" in val_str:
+                    # Use YAML block scalar for multi-line values (多行值使用 YAML 块标量)
+                    indented = "\n".join(f"  {line}" for line in val_str.split("\n"))
+                    lines.append(f"{key}: |\n{indented}")
+                else:
+                    lines.append(f"{key}: {val_str}")
         if not lines:
             return ""
         return "---\n" + "\n".join(lines) + "\n---\n"

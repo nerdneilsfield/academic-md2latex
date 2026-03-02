@@ -415,6 +415,34 @@ class TestFrontMatter:
         result = render(d)
         assert "---" not in result
 
+    def test_multiline_abstract_block_scalar(self) -> None:
+        """多行摘要使用块标量 (Multi-line abstract uses YAML block scalar)."""
+        d = doc()
+        d.metadata["abstract"] = "Line 1\nLine 2"
+        result = render(d)
+        assert "abstract: |" in result
+        assert "  Line 1" in result
+
+    def test_multiline_front_matter_valid_yaml(self) -> None:
+        """多行前言可解析为合法 YAML (Multi-line FM parseable as valid YAML)."""
+        from ruamel.yaml import YAML
+        d = doc()
+        d.metadata["title"] = "Paper"
+        d.metadata["abstract"] = "L1\nL2"
+        result = render(d)
+        yaml_str = result.split("---")[1]
+        parsed = YAML(typ="safe").load(yaml_str)
+        assert parsed["title"] == "Paper"
+        assert "L1" in parsed["abstract"]
+
+    def test_single_line_not_affected(self) -> None:
+        """单行值不受影响 (Single-line values unchanged)."""
+        d = doc()
+        d.metadata["title"] = "Simple"
+        result = render(d)
+        assert "title: Simple" in result
+        assert "abstract: |" not in result
+
 
 # ── Task 2 (H3): HTML Escaping (HTML 转义) ───────────────────────
 
