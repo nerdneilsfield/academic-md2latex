@@ -109,6 +109,7 @@ def main(
             bib=bib,
             heading_id_style=heading_id_style,
             locale=locale,
+            mode=mode,
             diag=diag,
         )
         result = renderer_md.render(east)

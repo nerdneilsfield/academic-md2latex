@@ -601,6 +601,55 @@ class TestLocale:
         assert "表 1" in result
 
 
+# ── Phase 3 Task 7: body/fragment Markdown modes (body/fragment 模式) ────────
+
+
+class TestMarkdownModes:
+    """Markdown mode rendering tests (Markdown 模式渲染测试)."""
+
+    def test_full_mode_has_front_matter(self) -> None:
+        """full 模式含前言 (Full mode includes front matter)."""
+        d = doc()
+        d.metadata["title"] = "Paper"
+        d.children = [Paragraph(children=[Text(content="Hello.")])]
+        result = MarkdownRenderer(mode="full").render(d)
+        assert "---" in result
+        assert "title: Paper" in result
+
+    def test_body_mode_no_front_matter(self) -> None:
+        """body 模式无前言 (Body mode excludes front matter)."""
+        d = doc()
+        d.metadata["title"] = "Paper"
+        d.children = [Paragraph(children=[Text(content="Hello.")])]
+        result = MarkdownRenderer(mode="body").render(d)
+        assert "---" not in result
+        assert "Hello." in result
+
+    def test_body_mode_has_footnotes(self) -> None:
+        """body 模式含脚注 (Body mode includes footnotes)."""
+        d = doc(
+            Paragraph(children=[
+                Citation(keys=["k1"], display_text="A"),
+            ])
+        )
+        result = MarkdownRenderer(mode="body").render(d)
+        assert "[^k1]:" in result
+
+    def test_fragment_mode_no_front_matter_no_footnotes(self) -> None:
+        """fragment 模式无前言无脚注 (Fragment mode: no FM, no footnotes)."""
+        d = doc(
+            Paragraph(children=[
+                Citation(keys=["k1"], display_text="A"),
+            ])
+        )
+        d.metadata["title"] = "Paper"
+        result = MarkdownRenderer(mode="fragment").render(d)
+        assert "---" not in result
+        assert "[^k1]:" not in result
+        # 引用引用仍在正文中 (Citation ref still in body)
+        assert "[^k1]" in result
+
+
 # ── Task 6: RawBlock + FrontMatter (原始块和前言) ────────────────
 
 

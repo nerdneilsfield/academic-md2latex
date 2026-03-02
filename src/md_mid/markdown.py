@@ -66,6 +66,7 @@ class MarkdownRenderer:
         bib: dict[str, str] | None = None,
         heading_id_style: str = "attr",
         locale: str = "zh",
+        mode: str = "full",
         diag: DiagCollector | None = None,
     ) -> None:
         """初始化渲染器 (Initialize renderer).
@@ -77,11 +78,14 @@ class MarkdownRenderer:
                 'attr' ({#id}) or 'html' (<hN id=...>)
                 (标题锚点风格)
             locale: Label language: 'zh' or 'en' (标签语言)
+            mode: Output mode: 'full', 'body', or 'fragment'
+                  (输出模式：full 含前言和脚注，body 无前言但有脚注，fragment 纯正文)
             diag: Optional diagnostic collector (可选诊断收集器)
         """
         self._bib = bib or {}
         self._heading_id_style = heading_id_style
         self._locale = locale
+        self._mode = mode
         self._labels = _LABEL_STRINGS.get(locale, _LABEL_STRINGS["zh"])
         self._diag = diag or DiagCollector("unknown")
         self._index: MarkdownIndex = MarkdownIndex()
@@ -109,16 +113,20 @@ class MarkdownRenderer:
         # Pass 2: 渲染 (Render)
         parts: list[str] = []
 
-        front_matter = self._render_front_matter(doc)
-        if front_matter:
-            parts.append(front_matter)
+        # full 模式才输出前言 (Only full mode renders front matter)
+        if self._mode == "full":
+            front_matter = self._render_front_matter(doc)
+            if front_matter:
+                parts.append(front_matter)
 
         body = self._render_children(doc)
         parts.append(body)
 
-        footnotes = self._render_footnotes()
-        if footnotes:
-            parts.append(footnotes)
+        # full 和 body 模式输出脚注 (full and body modes render footnotes)
+        if self._mode in ("full", "body"):
+            footnotes = self._render_footnotes()
+            if footnotes:
+                parts.append(footnotes)
 
         return "\n".join(p for p in parts if p)
 
