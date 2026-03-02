@@ -16,6 +16,7 @@ from md_mid.nodes import (
     ListItem,
     MathBlock,
     MathInline,
+    Node,
     Paragraph,
     RawBlock,
     SoftBreak,
@@ -24,6 +25,17 @@ from md_mid.nodes import (
     Text,
     ThematicBreak,
 )
+
+
+# 测试辅助函数 (Test helpers for Table cell construction)
+def _cells(*texts: str) -> list[list[Node]]:
+    """Wrap strings as Text node cells (字符串包装为 Text 节点单元格)."""
+    return [[Text(content=t)] for t in texts]
+
+
+def _rows(*row_texts: list[str]) -> list[list[list[Node]]]:
+    """Wrap string rows as Text node rows (字符串行包装为 Text 节点行)."""
+    return [[[Text(content=t)] for t in row] for row in row_texts]
 
 
 def render(node, **kwargs):
@@ -324,9 +336,9 @@ class TestFigure:
 class TestTable:
     def test_basic_table(self):
         t = Table(
-            headers=["Method", "RMSE"],
+            headers=_cells("Method", "RMSE"),
             alignments=["left", "left"],
-            rows=[["RANSAC", "2.3"], ["Ours", "1.9"]],
+            rows=_rows(["RANSAC", "2.3"], ["Ours", "1.9"]),
         )
         t.metadata["caption"] = "Results"
         t.metadata["label"] = "tab:results"
@@ -341,6 +353,28 @@ class TestTable:
         assert "\\hline" in result
         assert "\\end{tabular}" in result
         assert "\\end{table}" in result
+
+    def test_table_cell_bold_latex(self) -> None:
+        """表格粗体 LaTeX 渲染 (Bold in table cell renders as \\textbf)."""
+        t = Table(
+            headers=[[Strong(children=[Text(content="Method")])]],
+            alignments=["left"],
+            rows=[[[Text(content="RANSAC")]]],
+        )
+        t.metadata["caption"] = "T"
+        result = render(t)
+        assert "\\textbf{Method}" in result
+
+    def test_table_cell_code_latex(self) -> None:
+        """表格代码 LaTeX 渲染 (Code in table cell renders as \\texttt)."""
+        t = Table(
+            headers=_cells("H"),
+            alignments=["left"],
+            rows=[[[CodeInline(content="x=1")]]],
+        )
+        t.metadata["caption"] = "T"
+        result = render(t)
+        assert "\\texttt{x=1}" in result
 
 
 # ── Task 3: Diagnostic warnings in renderer ───────────────────────────────────

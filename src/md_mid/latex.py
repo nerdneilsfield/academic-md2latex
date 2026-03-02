@@ -12,7 +12,7 @@ from collections.abc import Callable
 from typing import cast
 
 from md_mid.diagnostic import DiagCollector
-from md_mid.escape import escape_latex, escape_latex_with_protection
+from md_mid.escape import escape_latex_with_protection
 from md_mid.nodes import (
     Citation,
     CodeBlock,
@@ -308,20 +308,24 @@ class LaTeXRenderer:
         lines.append(f"\\begin{{tabular}}{{{col_spec}}}")
         lines.append("\\hline")
 
-        # Header row (表头行)
-        header_row = " & ".join(escape_latex(h) for h in tbl.headers)
+        # 表头行 (Header row) — render inline nodes in each cell
+        header_row = " & ".join(self._render_nodes(h) for h in tbl.headers)
         lines.append(f"{header_row} \\\\")
         lines.append("\\hline")
 
-        # Data rows (数据行)
+        # 数据行 (Data rows) — render inline nodes in each cell
         for row in tbl.rows:
-            data_row = " & ".join(escape_latex(cell) for cell in row)
+            data_row = " & ".join(self._render_nodes(cell) for cell in row)
             lines.append(f"{data_row} \\\\")
 
         lines.append("\\hline")
         lines.append("\\end{tabular}")
         lines.append("\\end{table}")
         return "\n".join(lines) + "\n"
+
+    def _render_nodes(self, nodes: list[Node]) -> str:
+        """Render a list of inline nodes (渲染行内节点列表)."""
+        return "".join(self.render(n) for n in nodes)
 
     # -- 行内节点 ------------------------------------------------------------
 
