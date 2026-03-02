@@ -10,6 +10,7 @@
 - Never continuously check status after spawning a swarm — wait for results
 - ALWAYS read a file before editing it
 - NEVER commit secrets, credentials, or .env files
+- ALWAYS comment in bot Chinese and English
 
 ## File Organization
 
@@ -29,6 +30,150 @@
 - Prefer TDD London School (mock-first) for new code
 - Use event sourcing for state changes
 - Ensure input validation at system boundaries
+
+## Python Coding Standards / Python 代码规范
+
+### Type Annotations / 类型注解
+
+- **ALL** functions and methods MUST have complete type annotations
+- Use `from __future__ import annotations` for forward references
+- Use generics properly: `list[str]`, `dict[str, int]`, `Callable[[int], str]`
+- Use `| None` instead of `Optional`
+- Use `... | ...` instead of `Union[...]`
+- Complex return types should use type aliases or NamedTuple
+
+```python
+# ✅ Good
+from __future__ import annotations
+
+def process_data(items: list[dict[str, str]]) -> dict[str, int] | None:
+    ...
+
+# ❌ Bad
+def process_data(items):
+    ...
+```
+
+### Comments / 注释规范
+
+- **ALL** comments MUST be bilingual: English + Chinese
+- Format: `English description (中文说明)`
+- Docstrings follow Google style with bilingual support
+
+```python
+# ✅ Good
+# Calculate the average value (计算平均值)
+def calculate_average(values: list[float]) -> float:
+    """Calculate arithmetic mean of values.
+    
+    计算数值的算术平均值。
+    
+    Args:
+        values: List of numeric values (数值列表)
+        
+    Returns:
+        The arithmetic mean (算术平均数)
+        
+    Raises:
+        ValueError: If values is empty (当列表为空时)
+    """
+    if not values:
+        raise ValueError("Empty list (列表不能为空)")
+    return sum(values) / len(values)
+
+# ❌ Bad
+# Calculate average
+def calculate_average(values):
+    """Calculate mean."""
+    return sum(values) / len(values)
+```
+
+### Docstring Standards / 文档字符串规范
+
+- Use triple double quotes `"""`
+- Include: Description (EN+CN), Args, Returns, Raises
+- Type info in docstrings is optional if type annotations are complete
+
+```python
+class DataProcessor:
+    """Process and transform data structures.
+    
+    处理和转换数据结构。
+    
+    Attributes:
+        config: Configuration dictionary (配置字典)
+        cache: Internal cache for results (结果缓存)
+    """
+    
+    def __init__(self, config: dict[str, str]) -> None:
+        """Initialize processor with configuration.
+        
+        使用配置初始化处理器。
+        
+        Args:
+            config: Processing configuration (处理配置)
+        """
+        self.config = config
+        self.cache: dict[str, object] = {}  # Internal cache (内部缓存)
+```
+
+### Naming Conventions / 命名规范
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Module | `snake_case` | `comment_processor.py` |
+| Class | `PascalCase` | `LaTeXRenderer` |
+| Function | `snake_case` | `process_comments()` |
+| Constant | `UPPER_SNAKE_CASE` | `MAX_LINE_LENGTH` |
+| Private | `_leading_underscore` | `_internal_helper()` |
+| Type Variable | `PascalCase` or `T`, `K`, `V` | `NodeT` |
+
+### Best Practices / 最佳实践
+
+1. **Explicit over Implicit / 显式优于隐式**
+   - Always use explicit imports (使用显式导入)
+   - Avoid `from module import *` (避免星号导入)
+
+2. **Fail Fast / 快速失败**
+   - Validate inputs at function entry (在函数入口验证输入)
+   - Raise specific exceptions with clear messages (抛出具体异常)
+
+3. **Immutability / 不可变性**
+   - Use `dataclasses` with `frozen=True` for value objects
+   - Prefer tuples over lists for fixed data
+
+4. **Error Handling / 错误处理**
+   - Use custom exception classes for domain errors
+   - Always include context in error messages (EN+CN)
+   - Use `raise ... from ...` for exception chaining
+
+```python
+class ParseError(Exception):
+    """Raised when parsing fails (解析失败时抛出)."""
+    pass
+
+def parse_value(text: str) -> int:
+    """Parse integer from text (从文本解析整数)."""
+    try:
+        return int(text)
+    except ValueError as e:
+        raise ParseError(f"Invalid integer: {text} (无效的整数)") from e
+```
+
+5. **Testing / 测试规范**
+   - Test function names: `test_<function_name>_<scenario>`
+   - Use type-safe fixtures with annotations
+   - Include docstrings in tests (EN+CN)
+
+```python
+def test_calculate_average_empty_list() -> None:
+    """Test that empty list raises ValueError.
+    
+    测试空列表抛出 ValueError。
+    """
+    with pytest.raises(ValueError):
+        calculate_average([])
+```
 
 ### Project Config
 
