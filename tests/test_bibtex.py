@@ -53,3 +53,41 @@ def test_missing_key_not_in_result():
 def test_empty_bib_returns_empty_dict():
     assert parse_bib("") == {}
     assert parse_bib("  ") == {}
+
+
+# --- H2 + M1 bug-fix tests (H2 + M1 缺陷修复测试) ---
+
+
+def test_hyphenated_key_parsed() -> None:
+    """连字符键能被解析 (Hyphenated key like wang-2024 is parsed)."""
+    bib = '@article{wang-2024, author={Wang}, title={T}, year={2024}}'
+    assert "wang-2024" in parse_bib(bib)
+
+
+def test_colon_key_parsed() -> None:
+    """冒号键能被解析 (Colon key like doi:10.1234 is parsed)."""
+    bib = '@article{doi:10.1234/test, author={S}, title={T}, year={2024}}'
+    assert "doi:10.1234/test" in parse_bib(bib)
+
+
+def test_at_in_field_value() -> None:
+    """字段含 @ 不截断 (Field with @ like email is fully parsed)."""
+    bib = '@article{t, author={S}, note={x@y.com}, year={2024}}\n'
+    result = parse_bib(bib)
+    assert "t" in result and "2024" in result["t"]
+
+
+def test_multiple_entries_with_at() -> None:
+    """多条目含 @ 全部解析 (Multiple entries with @ in fields all parsed)."""
+    bib = (
+        '@article{a, author={A}, note={x@y}, year={2024}}\n'
+        '@article{b, author={B}, title={T}, year={2024}}\n'
+    )
+    result = parse_bib(bib)
+    assert "a" in result and "b" in result
+
+
+def test_no_double_period_et_al() -> None:
+    """多作者无双句号 (Multi-author has no 'et al..' double period)."""
+    bib = '@article{t, author={S and J}, title={T}, year={2024}}'
+    assert ".." not in parse_bib(bib)["t"]

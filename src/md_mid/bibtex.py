@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import re
 
-# 匹配 @type{key, ...} 条目 (Match @type{key, ...} entries)
-_ENTRY_RE = re.compile(
-    r"@\w+\{(\w+)\s*,([^@]*)\}",
-    re.DOTALL | re.IGNORECASE,
+# 匹配条目起始 @type{key, (Match entry start @type{key,)
+_ENTRY_START_RE = re.compile(
+    r"@(\w+)\{([^\s,]+)\s*,",
+    re.IGNORECASE,
 )
 
 # 匹配 field = {value} 或 field = "value" 或 field = bare
@@ -26,6 +26,36 @@ _FIELD_RE = re.compile(
     r"|(\S[^,\n]*))",
     re.DOTALL,
 )
+
+
+def _find_entry_body(text: str, start: int) -> str | None:
+    """大括号平衡的条目体查找 (Find balanced-brace entry body).
+
+    Starting after the opening ``{`` that follows the cite-key comma,
+    scan forward keeping a brace depth counter and return everything
+    up to the matching closing ``}``.
+
+    从引用键逗号之后的 ``{`` 开始，向前扫描并保持大括号深度计数器，
+    返回到匹配的闭合 ``}`` 之前的所有内容。
+
+    Args:
+        text: Full bib text (完整 bib 文本)
+        start: Position right after the comma (逗号之后的位置)
+
+    Returns:
+        Body text or None if unbalanced (条目体文本，不平衡时为 None)
+    """
+    depth = 1
+    i = start
+    while i < len(text):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i]
+        i += 1
+    return None
 
 
 def parse_bib(bib_text: str) -> dict[str, str]:
@@ -42,10 +72,13 @@ def parse_bib(bib_text: str) -> dict[str, str]:
         (引用键 → 单行引用字符串的字典)
     """
     result: dict[str, str] = {}
-    for entry_match in _ENTRY_RE.finditer(bib_text):
-        key = entry_match.group(1).strip()
-        fields_text = entry_match.group(2)
-        fields = _extract_fields(fields_text)
+    for entry_match in _ENTRY_START_RE.finditer(bib_text):
+        key = entry_match.group(2).strip()
+        # 从逗号之后开始查找条目体 (Find body starting after comma)
+        body = _find_entry_body(bib_text, entry_match.end())
+        if body is None:
+            continue
+        fields = _extract_fields(body)
         result[key] = _format_entry(fields)
     return result
 
@@ -101,4 +134,6 @@ def _format_entry(fields: dict[str, str]) -> str:
     if year := fields.get("year", ""):
         parts.append(year)
 
-    return ". ".join(parts) + "." if parts else ""
+    # 去除末尾句号以避免 "et al.." 双句号 (Strip trailing period to avoid double period)
+    cleaned = [p.rstrip(".") for p in parts]
+    return ". ".join(cleaned) + "." if cleaned else ""
