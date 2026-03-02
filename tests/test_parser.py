@@ -12,6 +12,8 @@ from md_mid.nodes import (
     MathBlock,
     MathInline,
     Paragraph,
+    Strong,
+    Table,
     Text,
 )
 from md_mid.parser import parse
@@ -185,3 +187,45 @@ def test_cite_valid_cmd_no_warning() -> None:
     dc = DiagCollector("test.md")
     parse("[text](cite:wang2024?cmd=citet)", diag=dc)
     assert not any("Unknown citation command" in d.message for d in dc.warnings)
+
+
+# ── Task 1: Rich table cell tests ─────────────────────────────────────────────
+
+
+def test_table_cell_bold_preserved() -> None:
+    """表格粗体保留 (Bold in table cell preserved as Strong node)."""
+    doc = parse("| **bold** | plain |\n|---|---|\n| a | b |\n")
+    table = [c for c in doc.children if isinstance(c, Table)][0]
+    # 第一个表头含 Strong 节点 (First header contains Strong)
+    assert any(isinstance(n, Strong) for n in table.headers[0])
+
+
+def test_table_cell_code_preserved() -> None:
+    """表格行内代码保留 (Code in table cell preserved as CodeInline)."""
+    doc = parse("| `code` | text |\n|---|---|\n| a | b |\n")
+    table = [c for c in doc.children if isinstance(c, Table)][0]
+    assert any(isinstance(n, CodeInline) for n in table.headers[0])
+
+
+def test_table_cell_plain_text_as_text_node() -> None:
+    """表格纯文本为 Text 节点 (Plain text cell is Text node)."""
+    doc = parse("| hello |\n|---|\n| world |\n")
+    table = [c for c in doc.children if isinstance(c, Table)][0]
+    assert any(isinstance(n, Text) for n in table.headers[0])
+    assert any(isinstance(n, Text) for n in table.rows[0][0])
+
+
+def test_single_column_table() -> None:
+    """单列表格 (Single column table parses correctly)."""
+    doc = parse("| H |\n|---|\n| V |\n")
+    table = [c for c in doc.children if isinstance(c, Table)][0]
+    assert len(table.headers) == 1
+    assert len(table.rows) == 1
+
+
+def test_empty_cell_table() -> None:
+    """空单元格表格 (Table with empty cells)."""
+    doc = parse("| A | |\n|---|---|\n| | B |\n")
+    table = [c for c in doc.children if isinstance(c, Table)][0]
+    assert len(table.headers) == 2
+    assert len(table.rows[0]) == 2

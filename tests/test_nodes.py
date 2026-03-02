@@ -6,6 +6,7 @@ from md_mid.nodes import (
     Figure,
     Heading,
     MathBlock,
+    Strong,
     Table,
     Text,
 )
@@ -71,11 +72,26 @@ def test_figure():
     assert f.src == "figs/a.png"
 
 
-def test_table():
+def test_table_node_with_inline_nodes() -> None:
+    """表格节点含行内节点 (Table node with inline nodes in cells)."""
     t = Table(
-        headers=["A", "B"],
-        alignments=["left", "right"],
-        rows=[["1", "2"]],
+        headers=[[Text(content="A")], [Strong(children=[Text(content="B")])]],
+        alignments=["left", "left"],
+        rows=[[[Text(content="1")], [Text(content="2")]]],
     )
     assert t.type == "table"
+    assert len(t.headers) == 2
     assert len(t.rows) == 1
+
+
+def test_table_to_dict_serializes_cell_nodes() -> None:
+    """表格 to_dict 序列化单元格节点 (Table to_dict serializes cell nodes)."""
+    t = Table(
+        headers=[[Text(content="H")]],
+        alignments=["left"],
+        rows=[[[Text(content="V")]]],
+    )
+    d = t.to_dict()
+    assert d["headers"][0][0]["type"] == "text"
+    assert d["headers"][0][0]["content"] == "H"
+    assert d["rows"][0][0][0]["type"] == "text"

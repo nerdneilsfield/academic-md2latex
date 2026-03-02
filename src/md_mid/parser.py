@@ -199,17 +199,18 @@ def _build_html_block(node: SyntaxTreeNode) -> RawBlock:
 
 
 def _build_table(node: SyntaxTreeNode) -> Table:
-    headers: list[str] = []
+    headers: list[list[Node]] = []
     alignments: list[str] = []
-    rows: list[list[str]] = []
+    rows: list[list[list[Node]]] = []
 
     for section in node.children:
         if section.type == "thead":
             for tr in section.children:
                 for cell in tr.children:
-                    text = _extract_text_from_tree(cell)
-                    headers.append(text)
-                    # attrGet 可能返回非字符串，统一转换（attrGet may return non-str, cast）
+                    # 构建行内节点列表 (Build inline node list for cell)
+                    cell_nodes = _build_children(cell)
+                    headers.append(cell_nodes)
+                    # 对齐信息不变 (Alignment extraction unchanged)
                     style: str = str(cell.attrGet("style") or "")
                     if "left" in style:
                         alignments.append("left")
@@ -221,9 +222,9 @@ def _build_table(node: SyntaxTreeNode) -> Table:
                         alignments.append("left")
         elif section.type == "tbody":
             for tr in section.children:
-                row: list[str] = []
+                row: list[list[Node]] = []
                 for cell in tr.children:
-                    row.append(_extract_text_from_tree(cell))
+                    row.append(_build_children(cell))
                 rows.append(row)
 
     return Table(

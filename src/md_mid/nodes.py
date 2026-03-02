@@ -123,15 +123,39 @@ class Figure(Node):
         return "figure"
 
 
+# 表格单元格类型别名 (Table cell type aliases for readability)
+CellContent = list["Node"]  # 单元格内容：行内节点列表 (Cell: list of inline nodes)
+TableRow = list[CellContent]  # 表格行：单元格列表 (Row: list of cells)
+
+
 @dataclass
 class Table(Node):
-    headers: list[str] = field(default_factory=list)
+    headers: list[CellContent] = field(default_factory=list)
     alignments: list[str] = field(default_factory=list)
-    rows: list[list[str]] = field(default_factory=list)
+    rows: list[TableRow] = field(default_factory=list)
 
     @property
     def type(self) -> str:
         return "table"
+
+    def to_dict(self) -> dict[str, object]:
+        """Serialize table with inline node cells (序列化含行内节点的表格单元格)."""
+        result: dict[str, object] = {"type": self.type}
+        if self.children:
+            result["children"] = [c.to_dict() for c in self.children]
+        if self.metadata:
+            result["metadata"] = self.metadata
+        if self.position is not None:
+            result["position"] = self.position
+        result["headers"] = [
+            [n.to_dict() for n in cell] for cell in self.headers
+        ]
+        result["alignments"] = self.alignments
+        result["rows"] = [
+            [[n.to_dict() for n in cell] for cell in row]
+            for row in self.rows
+        ]
+        return result
 
 
 @dataclass
