@@ -1,0 +1,10 @@
+# IEEE Conference Template (IEEE 会议模板)
+documentclass: IEEEtran
+classoptions: [conference]
+packages:
+  - amsmath
+  - graphicx
+  - cite
+extra-preamble: |
+  \IEEEoverridecommandlockouts
+bibstyle: IEEEtran

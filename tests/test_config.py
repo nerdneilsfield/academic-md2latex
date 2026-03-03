@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from md_mid.config import MdMidConfig, load_config_file, resolve_config
+from md_mid.config import MdMidConfig, load_config_file, load_template, resolve_config
 
 
 def test_config_defaults() -> None:
@@ -133,3 +133,50 @@ def test_load_config_file_invalid_yaml(tmp_path: Path) -> None:
     cfg_file.write_text(": invalid: yaml: {{{\n")
     d = load_config_file(cfg_file)
     assert d == {}
+
+
+def test_load_template(tmp_path: Path) -> None:
+    """Load LaTeX template (加载 LaTeX 模板)."""
+    tpl = tmp_path / "ieee.yaml"
+    tpl.write_text(
+        "documentclass: IEEEtran\n"
+        "classoptions: [conference]\n"
+        "packages:\n"
+        "  - amsmath\n"
+        "  - graphicx\n"
+        "  - cite\n"
+        "bibstyle: IEEEtran\n"
+        "extra-preamble: override\n"
+    )
+    d = load_template(tpl)
+    assert d["documentclass"] == "IEEEtran"
+    assert d["classoptions"] == ["conference"]
+    assert "cite" in d["packages"]
+    assert d["bibstyle"] == "IEEEtran"
+    assert d.get("preamble") == "override"
+    assert "extra-preamble" not in d
+
+
+def test_load_template_not_found() -> None:
+    """Missing template returns empty dict (不存在的模板返回空字典)."""
+    d = load_template(Path("/nonexistent/template.yaml"))
+    assert d == {}
+
+
+def test_load_template_invalid_yaml(tmp_path: Path) -> None:
+    """Invalid YAML in template returns empty dict (模板中无效 YAML 不崩溃)."""
+    tpl = tmp_path / "bad.yaml"
+    # Use a flow mapping that is never closed — ruamel.yaml raises ParserError
+    # (使用未闭合的流式映射使解析器抛出 ParserError)
+    tpl.write_text("{unclosed\n")
+    d = load_template(tpl)
+    assert d == {}
+
+
+def test_load_template_extra_preamble_mapped(tmp_path: Path) -> None:
+    """extra-preamble key is mapped to preamble (extra-preamble 映射为 preamble)."""
+    tpl = tmp_path / "t.yaml"
+    tpl.write_text("extra-preamble: '\\newcommand{\\x}{1}'\n")
+    d = load_template(tpl)
+    assert "preamble" in d
+    assert "extra-preamble" not in d

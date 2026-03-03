@@ -173,6 +173,45 @@ def resolve_config(
     return MdMidConfig.from_dict(merged)
 
 
+def load_template(path: Path) -> dict[str, object]:
+    """Load LaTeX template from YAML file, return dict (从 YAML 文件加载 LaTeX 模板).
+
+    Template keys are a subset of config (PRD §10.3):
+    documentclass, classoptions, packages, package-options, extra-preamble, bibstyle.
+
+    The key 'extra-preamble' is mapped to 'preamble' for MdMidConfig compatibility.
+    (extra-preamble 映射为 preamble 以兼容 MdMidConfig。)
+
+    Returns an empty dict if file does not exist or YAML parse fails.
+    (文件不存在或 YAML 解析失败时返回空字典。)
+
+    Args:
+        path: Path to template file (模板文件路径)
+
+    Returns:
+        Dict with only explicitly-set template keys (仅含显式设置键的字典)
+    """
+    if not path.exists():
+        return {}
+
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = _yaml.load(f)
+    except Exception:
+        _log.warning("Failed to parse template file: %s", path)
+        return {}
+
+    if not isinstance(data, dict):
+        return {}
+
+    # Map template-specific keys to config keys (映射模板键到配置键)
+    result = dict(data)
+    if "extra-preamble" in result:
+        result["preamble"] = result.pop("extra-preamble")
+
+    return result
+
+
 def load_config_file(path: Path) -> dict[str, object]:
     """Load config from YAML file, return flat dict (从 YAML 文件加载配置，返回扁平字典).
 
