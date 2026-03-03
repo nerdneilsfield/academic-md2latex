@@ -139,6 +139,11 @@ class LaTeXRenderer:
             if pkg not in packages:
                 lines.append(f"\\usepackage[{pkg_opt}]{{{pkg}}}")
 
+        # Locale overrides for figure/table caption names (本地化标题名覆盖)
+        if self.locale == "en":
+            lines.append("\\renewcommand{\\figurename}{Figure}")
+            lines.append("\\renewcommand{\\tablename}{Table}")
+
         # bibliography_mode 决定是否输出参考文献相关命令
         # (bibliography_mode determines whether to emit bibliography commands)
         bib: str = str(meta.get("bibliography", "") or "")

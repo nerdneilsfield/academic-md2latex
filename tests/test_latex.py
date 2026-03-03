@@ -598,3 +598,32 @@ class TestLatexFootnotes:
         )
         result = LaTeXRenderer().render(fn_def)
         assert result == ""
+
+
+# ── Task 10: LaTeX Locale Overrides ───────────────────────────────────────────
+
+
+class TestLatexLocale:
+    """LaTeX locale override tests (LaTeX 本地化覆盖测试)."""
+
+    def test_latex_locale_english_figurename(self) -> None:
+        """English locale injects figurename and tablename overrides (英文本地化注入图表名覆盖).
+
+        With locale='en', render_document() must emit \\renewcommand for both
+        \\figurename and \\tablename. (locale='en' 时，两个 renewcommand 必须出现。)
+        """
+        doc = Document(children=[], metadata={})
+        result = LaTeXRenderer(locale="en").render(doc)
+        assert "\\renewcommand{\\figurename}{Figure}" in result
+        assert "\\renewcommand{\\tablename}{Table}" in result
+
+    def test_latex_locale_zh_no_override(self) -> None:
+        """Default (zh) locale does not inject renewcommand overrides (默认中文本地化不注入覆盖).
+
+        With locale='zh' (default), no \\renewcommand lines should appear for
+        figurename or tablename. (默认中文时不应出现 renewcommand 覆盖。)
+        """
+        doc = Document(children=[], metadata={})
+        result = LaTeXRenderer(locale="zh").render(doc)
+        assert "\\renewcommand{\\figurename}" not in result
+        assert "\\renewcommand{\\tablename}" not in result
