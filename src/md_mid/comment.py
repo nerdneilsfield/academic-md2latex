@@ -409,8 +409,16 @@ def _process_includes(
                     )
                     i += 1
                     continue
-                # Read verbatim — no strip() (原样读取 — 不去空白)
-                content = tex_path.read_text(encoding="utf-8")
+                # Read verbatim — wrap OS/encoding errors as diag errors (原样读取 — 错误转为诊断)
+                try:
+                    content = tex_path.read_text(encoding="utf-8")
+                except (IsADirectoryError, UnicodeDecodeError, PermissionError, OSError) as exc:
+                    diag.error(
+                        f"include-tex could not read file: {tex_rel} ({exc})",
+                        _pos_from_node(child),
+                    )
+                    i += 1
+                    continue
                 children[i] = RawBlock(content=content, position=child.position)
                 i += 1
                 continue

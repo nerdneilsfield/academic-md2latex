@@ -303,3 +303,31 @@ def test_include_tex_preserves_content_verbatim(tmp_path: Path) -> None:
     raws = [c for c in east.children if isinstance(c, RawBlock)]
     assert len(raws) == 1
     assert raws[0].content == "\n  \\command\n\n"
+
+
+def test_include_tex_directory_path(tmp_path: Path) -> None:
+    """include-tex 指向目录时报错而不崩溃.
+
+    include-tex on directory path reports error, no crash.
+    """
+    (tmp_path / "subdir").mkdir()
+    text = "<!-- include-tex: subdir -->\n"
+    raw = parse(text)
+    dc = DiagCollector(str(tmp_path / "t.mid.md"))
+    # Must not raise; must produce a diag error (不抛异常，报告 diag 错误)
+    process_comments(raw, str(tmp_path / "t.mid.md"), diag=dc)
+    assert any("include-tex" in d.message for d in dc.errors)
+
+
+def test_include_tex_non_utf8_file(tmp_path: Path) -> None:
+    """include-tex 指向非 UTF-8 文件时报错而不崩溃.
+
+    include-tex on binary file reports error, no crash.
+    """
+    binary = tmp_path / "bad.tex"
+    binary.write_bytes(b"\xff\xfe\x00bad")
+    text = "<!-- include-tex: bad.tex -->\n"
+    raw = parse(text)
+    dc = DiagCollector(str(tmp_path / "t.mid.md"))
+    process_comments(raw, str(tmp_path / "t.mid.md"), diag=dc)
+    assert any("include-tex" in d.message for d in dc.errors)
