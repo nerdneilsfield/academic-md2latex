@@ -156,6 +156,7 @@ class TestBlock:
         assert "\\end{theorem}" in result
 
     def test_thematic_break_default_newpage(self):
+        """Default thematic break renders as newpage (默认分隔线渲染为 newpage)."""
         result = render(ThematicBreak())
         assert "\\newpage" in result
 
