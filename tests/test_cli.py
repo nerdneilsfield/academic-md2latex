@@ -293,6 +293,32 @@ def test_cli_bibliography_mode_none(tmp_path: Path) -> None:
     assert "\\bibliography" not in content
 
 
+def test_cli_config_title_author_injected(tmp_path: Path) -> None:
+    """Config-file title/author/date/abstract appear in LaTeX output.
+
+    配置文件元数据注入到 LaTeX 输出。
+    """
+    cfg = tmp_path / "md-mid.yaml"
+    cfg.write_text(
+        "title: Config Title\n"
+        "author: Config Author\n"
+        "date: 2026-01-01\n"
+        "abstract: Config abstract text.\n"
+    )
+    src = tmp_path / "t.mid.md"
+    src.write_text("# Hello\n\nWorld.\n")
+    out = tmp_path / "out.tex"
+    result = CliRunner().invoke(
+        main, [str(src), "-o", str(out), "--config", str(cfg)]
+    )
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert "\\title{Config Title}" in content
+    assert "\\author{Config Author}" in content
+    assert "\\date{2026-01-01}" in content
+    assert "Config abstract text." in content
+
+
 def test_cli_explicit_mode_overrides_config(tmp_path: Path) -> None:
     """CLI --mode 覆盖配置文件 (CLI --mode overrides config file mode)."""
     cfg = tmp_path / "md-mid.yaml"

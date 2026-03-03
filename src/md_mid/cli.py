@@ -149,6 +149,12 @@ def main(
             "bibstyle": cfg.bibstyle,
             "preamble": cfg.preamble,
             "bibliography_mode": cfg.bibliography_mode,
+            # Document metadata — empty strings are falsy, renderer skips
+            # (文档元数据 — 空字符串渲染器跳过)
+            "title": cfg.title,
+            "author": cfg.author,
+            "date": cfg.date,
+            "abstract": cfg.abstract,
         })
 
         renderer = LaTeXRenderer(
