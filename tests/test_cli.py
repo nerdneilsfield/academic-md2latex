@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -230,3 +231,62 @@ def test_markdown_locale_english(tmp_path) -> None:
     assert result.exit_code == 0
     content = out.read_text()
     assert "Figure 1" in content
+
+
+# ── Task 4 (Config): --template, --config, --bibliography-mode ───────────────
+
+
+def test_cli_template_option(tmp_path: Path) -> None:
+    """--template 加载 LaTeX 模板 (--template loads LaTeX template)."""
+    tpl = tmp_path / "my.yaml"
+    tpl.write_text("documentclass: IEEEtran\nclassoptions: [conference]\n")
+    src = tmp_path / "t.mid.md"
+    src.write_text("# Hello\n\nWorld.\n")
+    out = tmp_path / "out.tex"
+    result = CliRunner().invoke(
+        main, [str(src), "-o", str(out), "--template", str(tpl)]
+    )
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert "\\documentclass[conference]{IEEEtran}" in content
+
+
+def test_cli_config_option_thematic_break(tmp_path: Path) -> None:
+    """--config 加载外部配置 (--config loads external config)."""
+    cfg = tmp_path / "md-mid.yaml"
+    cfg.write_text("latex:\n  thematic-break: hrule\n")
+    src = tmp_path / "t.mid.md"
+    src.write_text("---\n\n# Section\n")
+    out = tmp_path / "out.tex"
+    result = CliRunner().invoke(
+        main, [str(src), "-o", str(out), "--config", str(cfg)]
+    )
+    assert result.exit_code == 0
+
+
+def test_cli_bibliography_mode_none(tmp_path: Path) -> None:
+    """--bibliography-mode none 隐藏参考文献 (--bibliography-mode none suppresses bibliography)."""
+    src = tmp_path / "t.mid.md"
+    src.write_text("<!-- bibliography: refs.bib -->\n\n# Intro\n\nText.\n")
+    out = tmp_path / "out.tex"
+    result = CliRunner().invoke(
+        main, [str(src), "-o", str(out), "--bibliography-mode", "none"]
+    )
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert "\\bibliography" not in content
+
+
+def test_cli_explicit_mode_overrides_config(tmp_path: Path) -> None:
+    """CLI --mode 覆盖配置文件 (CLI --mode overrides config file mode)."""
+    cfg = tmp_path / "md-mid.yaml"
+    cfg.write_text("latex:\n  mode: body\n")
+    src = tmp_path / "t.mid.md"
+    src.write_text("# Intro\n\nText.\n")
+    out = tmp_path / "out.tex"
+    result = CliRunner().invoke(
+        main, [str(src), "-o", str(out), "--config", str(cfg), "--mode", "full"]
+    )
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert "\\documentclass" in content  # full 模式有前言 (full mode has preamble)

@@ -10,6 +10,7 @@ import click
 
 from md_mid import __version__
 from md_mid.comment import process_comments
+from md_mid.config import load_config_file, load_template, resolve_config
 from md_mid.diagnostic import DiagCollector
 from md_mid.latex import LaTeXRenderer
 from md_mid.markdown import MarkdownRenderer
@@ -24,7 +25,8 @@ from md_mid.parser import parse
     default="latex",
 )
 @click.option("-o", "--output", type=click.Path(path_type=Path), default=None)
-@click.option("--mode", type=click.Choice(["full", "body", "fragment"]), default="full")
+@click.option("--mode", type=click.Choice(["full", "body", "fragment"]), default=None,
+              help="Output mode: full | body | fragment  (默认: full)")
 @click.option("--strict", is_flag=True, default=False)
 @click.option("--verbose", is_flag=True, default=False)
 @click.option("--dump-east", is_flag=True, default=False)
@@ -36,25 +38,48 @@ from md_mid.parser import parse
 @click.option(
     "--heading-id-style",
     type=click.Choice(["attr", "html"]),
-    default="attr",
+    default=None,
+    help="Heading anchor style: attr ({#id}) | html (<h2 id>)",
 )
 @click.option(
     "--locale",
     type=click.Choice(["zh", "en"]),
-    default="zh",
+    default=None,
+    help="Label language: zh | en  (默认: zh)",
+)
+@click.option(
+    "--template", "template_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="LaTeX template file (.yaml)",
+)
+@click.option(
+    "--config", "config_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="External config file (md-mid.yaml)",
+)
+@click.option(
+    "--bibliography-mode",
+    type=click.Choice(["auto", "standalone", "external", "none"]),
+    default=None,
+    help="Bibliography output strategy",
 )
 @click.version_option(version=__version__)
 def main(
     input: Path,
     target: str,
     output: Path | None,
-    mode: str,
+    mode: str | None,
     strict: bool,
     verbose: bool,
     dump_east: bool,
     bib_path: Path | None,
-    heading_id_style: str,
-    locale: str,
+    heading_id_style: str | None,
+    locale: str | None,
+    template_path: Path | None,
+    config_path: Path | None,
+    bibliography_mode: str | None,
 ) -> None:
     """md-mid: 学术写作中间格式转换工具"""
     # 读取输入：stdin 或文件 (Read input: stdin or file)
@@ -74,6 +99,30 @@ def main(
     doc = parse(text, diag=diag)
     east = process_comments(doc, filename, diag=diag)
 
+    # 构建 CLI 覆盖字典 — 仅非 None 值参与覆盖
+    # (Build CLI override dict — only non-None values participate)
+    cli_dict: dict[str, object] = {}
+    if mode is not None:
+        cli_dict["mode"] = mode
+    if locale is not None:
+        cli_dict["locale"] = locale
+    if heading_id_style is not None:
+        cli_dict["heading_id_style"] = heading_id_style
+    if bibliography_mode is not None:
+        cli_dict["bibliography_mode"] = bibliography_mode
+
+    # 加载配置层 (Load config layers)
+    tpl_dict = load_template(template_path) if template_path else None
+    cfg_dict = load_config_file(config_path) if config_path else None
+
+    # 解析最终配置 (Resolve final config)
+    cfg = resolve_config(
+        cli_overrides=cli_dict if cli_dict else None,
+        east_meta=east.metadata,
+        config_dict=cfg_dict,
+        template_dict=tpl_dict,
+    )
+
     # 转储 EAST JSON 并退出（Dump EAST as JSON and exit）
     if dump_east:
         click.echo(json.dumps(east.to_dict(), ensure_ascii=False, indent=2))
@@ -89,7 +138,22 @@ def main(
         raise SystemExit(1)
 
     if target == "latex":
-        renderer = LaTeXRenderer(mode=mode, diag=diag)
+        # 将模板元数据回注 EAST 用于前言生成，文档指令优先（低优先级用 setdefault）
+        # (Inject template metadata into east.metadata for preamble generation;
+        #  document directives take priority via setdefault)
+        for field in (
+            "documentclass", "classoptions", "packages", "package_options",
+            "bibliography", "bibstyle", "preamble",
+        ):
+            val = getattr(cfg, field)
+            if val:  # 仅注入非空值 (Only inject non-empty values)
+                east.metadata.setdefault(field, val)
+
+        # 将解析后的 bibliography_mode 注入 EAST 元数据，供渲染器使用
+        # (Inject resolved bibliography_mode into east.metadata for renderer)
+        east.metadata["bibliography_mode"] = cfg.bibliography_mode
+
+        renderer = LaTeXRenderer(mode=cfg.mode, diag=diag)
         result = renderer.render(east)
         suffix = ".tex"
     elif target == "markdown":
@@ -107,9 +171,9 @@ def main(
                 )
         renderer_md = MarkdownRenderer(
             bib=bib,
-            heading_id_style=heading_id_style,
-            locale=locale,
-            mode=mode,
+            heading_id_style=cfg.heading_id_style,
+            locale=cfg.locale,
+            mode=cfg.mode,
             diag=diag,
         )
         result = renderer_md.render(east)

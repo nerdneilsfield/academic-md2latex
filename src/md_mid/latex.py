@@ -111,9 +111,16 @@ class LaTeXRenderer:
             if pkg not in packages:
                 lines.append(f"\\usepackage[{pkg_opt}]{{{pkg}}}")
 
-        # bibstyle
-        if bibstyle := meta.get("bibstyle"):
-            lines.append(f"\\bibliographystyle{{{bibstyle}}}")
+        # bibliography_mode 决定是否输出参考文献相关命令
+        # (bibliography_mode determines whether to emit bibliography commands)
+        bib: str = str(meta.get("bibliography", "") or "")
+        bib_mode: str = str(meta.get("bibliography_mode", "auto") or "auto")
+        bib_active: bool = bib_mode in ("auto", "standalone")
+
+        # bibstyle — 仅在参考文献激活时输出 (Only emit when bibliography is active)
+        if bib_active:
+            if bibstyle := meta.get("bibstyle"):
+                lines.append(f"\\bibliographystyle{{{bibstyle}}}")
 
         # title/author/date
         for key in ("title", "author", "date"):
@@ -138,10 +145,9 @@ class LaTeXRenderer:
         lines.append("")
         lines.append(body)
 
-        # bibliography
-        bib: str = str(meta.get("bibliography", "") or "")
-        bib_mode: str = str(meta.get("bibliography_mode", "auto") or "auto")
-        if bib and bib_mode in ("auto", "standalone"):
+        # bibliography — 仅在激活且 bib 文件存在时输出
+        # (Only emit when active and bib file specified)
+        if bib and bib_active:
             bib_name = bib.removesuffix(".bib")
             lines.append(f"\\bibliography{{{bib_name}}}")
 
