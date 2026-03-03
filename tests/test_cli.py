@@ -319,6 +319,27 @@ def test_cli_config_title_author_injected(tmp_path: Path) -> None:
     assert "Config abstract text." in content
 
 
+def test_cli_default_target_from_config(tmp_path: Path) -> None:
+    """default-target in config selects the renderer (配置文件 default-target 选择渲染器).
+
+    When --target is not given on CLI and config says default-target: markdown,
+    the markdown renderer should be used. (未指定 --target 时，配置中的 default-target 生效。)
+    """
+    cfg = tmp_path / "md-mid.yaml"
+    cfg.write_text("default-target: markdown\n")
+    src = tmp_path / "t.mid.md"
+    src.write_text("# Hello\n\nWorld.\n")
+    out = tmp_path / "out.rendered.md"
+    result = CliRunner().invoke(
+        main, [str(src), "-o", str(out), "--config", str(cfg)]
+    )
+    assert result.exit_code == 0
+    content = out.read_text()
+    # Markdown output, not LaTeX (Markdown 输出而非 LaTeX)
+    assert "\\documentclass" not in content
+    assert "# Hello" in content
+
+
 def test_cli_explicit_mode_overrides_config(tmp_path: Path) -> None:
     """CLI --mode 覆盖配置文件 (CLI --mode overrides config file mode)."""
     cfg = tmp_path / "md-mid.yaml"

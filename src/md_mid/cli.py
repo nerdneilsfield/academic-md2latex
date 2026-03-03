@@ -22,7 +22,7 @@ from md_mid.parser import parse
 @click.option(
     "-t", "--target",
     type=click.Choice(["latex", "markdown", "html"]),
-    default="latex",
+    default=None,
 )
 @click.option("-o", "--output", type=click.Path(path_type=Path), default=None)
 @click.option("--mode", type=click.Choice(["full", "body", "fragment"]), default=None,
@@ -68,7 +68,7 @@ from md_mid.parser import parse
 @click.version_option(version=__version__)
 def main(
     input: Path,
-    target: str,
+    target: str | None,
     output: Path | None,
     mode: str | None,
     strict: bool,
@@ -123,6 +123,9 @@ def main(
         template_dict=tpl_dict,
     )
 
+    # Effective target: CLI > config > default (有效输出目标：CLI > 配置 > 默认 latex)
+    effective_target: str = target if target is not None else cfg.target
+
     # 转储 EAST JSON 并退出（Dump EAST as JSON and exit）
     if dump_east:
         click.echo(json.dumps(east.to_dict(), ensure_ascii=False, indent=2))
@@ -137,7 +140,7 @@ def main(
             click.echo(str(d), err=True)
         raise SystemExit(1)
 
-    if target == "latex":
+    if effective_target == "latex":
         # Inject resolved preamble metadata into EAST for renderer use
         # (将解析后的元数据回注 EAST 供渲染器使用)
         east.metadata.update({
@@ -167,7 +170,7 @@ def main(
         )
         result = renderer.render(east)
         suffix = ".tex"
-    elif target == "markdown":
+    elif effective_target == "markdown":
         # 解析 .bib 文件（Parse .bib file if provided）
         bib: dict[str, str] = {}
         if bib_path is not None:
@@ -191,7 +194,7 @@ def main(
         suffix = ".rendered.md"
     else:
         click.echo(
-            f"Target '{target}' not yet implemented.", err=True
+            f"Target '{effective_target}' not yet implemented.", err=True
         )
         raise SystemExit(1)
 
