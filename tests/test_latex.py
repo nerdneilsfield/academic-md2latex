@@ -616,6 +616,10 @@ class TestLatexLocale:
         result = LaTeXRenderer(locale="en").render(doc)
         assert "\\renewcommand{\\figurename}{Figure}" in result
         assert "\\renewcommand{\\tablename}{Table}" in result
+        # Locale overrides must appear in the preamble, before \begin{document} (覆盖必须在导言区)
+        begin_doc = result.index("\\begin{document}")
+        assert result.index("\\renewcommand{\\figurename}{Figure}") < begin_doc
+        assert result.index("\\renewcommand{\\tablename}{Table}") < begin_doc
 
     def test_latex_locale_zh_no_override(self) -> None:
         """Default (zh) locale does not inject renewcommand overrides (默认中文本地化不注入覆盖).
