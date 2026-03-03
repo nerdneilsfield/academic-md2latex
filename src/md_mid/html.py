@@ -9,6 +9,7 @@ import html as _html_lib
 import re
 from typing import cast
 
+from md_mid.ai_meta import render_ai_details_html
 from md_mid.nodes import (
     Citation,
     CodeBlock,
@@ -30,9 +31,7 @@ from md_mid.nodes import (
     Table,
     Text,
 )
-
-# Dangerous URI schemes to block (危险 URI scheme 黑名单)
-_UNSAFE_SCHEMES = ("javascript:", "vbscript:", "data:text/html")
+from md_mid.url_check import is_unsafe_url
 
 
 def _esc(text: str) -> str:
@@ -43,8 +42,6 @@ def _esc(text: str) -> str:
 # Safe width pattern: digits + CSS units only (安全宽度正则：仅数字 + CSS 单位)
 _SAFE_WIDTH_RE = re.compile(r"^\d+(\.\d+)?(px|em|rem|%|cm|mm|pt|vw)$")
 
-# Strip ASCII control characters from URLs before scheme check (URL 中 ASCII 控制字符清除)
-_CTRL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
 
 # MathJax v3 CDN (MathJax v3 CDN 链接)
 _MATHJAX_CDN = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
@@ -410,9 +407,8 @@ class HTMLRenderer:
         lnk = cast(Link, node)
         text = self._render_children(node)
         url = lnk.url
-        # Block dangerous schemes; strip control chars first (阻止危险 scheme，先清除控制字符)
-        cleaned = _CTRL_CHARS_RE.sub("", url).strip().lower()
-        if cleaned.startswith(_UNSAFE_SCHEMES):
+        # Block dangerous schemes (阻止危险 scheme)
+        if is_unsafe_url(url):
             return text  # render text only, drop the link (仅渲染文本，丢弃链接)
         return f'<a href="{_esc(url)}">{text}</a>'
 
@@ -493,17 +489,4 @@ class HTMLRenderer:
 
     def _render_ai_details(self, ai: dict[str, object]) -> list[str]:
         """Render AI generation info as HTML details fold (AI 信息折叠块渲染)."""
-        lines = [
-            "  <details>",
-            "    <summary>AI Generation Info</summary>",
-        ]
-        if model := ai.get("model"):
-            lines.append(f"    <p><strong>Model</strong>: {_esc(str(model))}</p>")
-        if prompt := ai.get("prompt"):
-            lines.append(f"    <p><strong>Prompt</strong>: {_esc(str(prompt))}</p>")
-        if neg := ai.get("negative_prompt"):
-            lines.append(f"    <p><strong>Negative</strong>: {_esc(str(neg))}</p>")
-        if params := ai.get("params"):
-            lines.append(f"    <p><strong>Params</strong>: {_esc(str(params))}</p>")
-        lines.append("  </details>")
-        return lines
+        return render_ai_details_html(ai, _esc)
