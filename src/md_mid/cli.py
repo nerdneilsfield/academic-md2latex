@@ -20,18 +20,24 @@ from md_mid.parser import parse
 @click.command()
 @click.argument("input", type=click.Path(path_type=Path))  # No exists=True: allow "-" for stdin
 @click.option(
-    "-t", "--target",
+    "-t",
+    "--target",
     type=click.Choice(["latex", "markdown", "html"]),
     default=None,
 )
 @click.option("-o", "--output", type=click.Path(path_type=Path), default=None)
-@click.option("--mode", type=click.Choice(["full", "body", "fragment"]), default=None,
-              help="Output mode: full | body | fragment  (默认: full)")
+@click.option(
+    "--mode",
+    type=click.Choice(["full", "body", "fragment"]),
+    default=None,
+    help="Output mode: full | body | fragment  (默认: full)",
+)
 @click.option("--strict", is_flag=True, default=False)
 @click.option("--verbose", is_flag=True, default=False)
 @click.option("--dump-east", is_flag=True, default=False)
 @click.option(
-    "--bib", "bib_path",
+    "--bib",
+    "bib_path",
     type=click.Path(exists=True, path_type=Path),
     default=None,
 )
@@ -48,13 +54,15 @@ from md_mid.parser import parse
     help="Label language: zh | en  (默认: zh)",
 )
 @click.option(
-    "--template", "template_path",
+    "--template",
+    "template_path",
     type=click.Path(exists=True, path_type=Path),
     default=None,
     help="LaTeX template file (.yaml)",
 )
 @click.option(
-    "--config", "config_path",
+    "--config",
+    "config_path",
     type=click.Path(exists=True, path_type=Path),
     default=None,
     help="External config file (md-mid.yaml)",
@@ -143,22 +151,24 @@ def main(
     if effective_target == "latex":
         # Inject resolved preamble metadata into EAST for renderer use
         # (将解析后的元数据回注 EAST 供渲染器使用)
-        east.metadata.update({
-            "documentclass": cfg.documentclass,
-            "classoptions": cfg.classoptions,
-            "packages": cfg.packages,
-            "package_options": cfg.package_options,
-            "bibliography": cfg.bibliography,
-            "bibstyle": cfg.bibstyle,
-            "preamble": cfg.preamble,
-            "bibliography_mode": cfg.bibliography_mode,
-            # Document metadata — empty strings are falsy, renderer skips
-            # (文档元数据 — 空字符串渲染器跳过)
-            "title": cfg.title,
-            "author": cfg.author,
-            "date": cfg.date,
-            "abstract": cfg.abstract,
-        })
+        east.metadata.update(
+            {
+                "documentclass": cfg.documentclass,
+                "classoptions": cfg.classoptions,
+                "packages": cfg.packages,
+                "package_options": cfg.package_options,
+                "bibliography": cfg.bibliography,
+                "bibstyle": cfg.bibstyle,
+                "preamble": cfg.preamble,
+                "bibliography_mode": cfg.bibliography_mode,
+                # Document metadata — empty strings are falsy, renderer skips
+                # (文档元数据 — 空字符串渲染器跳过)
+                "title": cfg.title,
+                "author": cfg.author,
+                "date": cfg.date,
+                "abstract": cfg.abstract,
+            }
+        )
 
         renderer = LaTeXRenderer(
             mode=cfg.mode,
@@ -180,9 +190,7 @@ def main(
             try:
                 bib = parse_bib(bib_path.read_text(encoding="utf-8"))
             except Exception as exc:
-                click.echo(
-                    f"[WARNING] Failed to parse {bib_path}: {exc}", err=True
-                )
+                click.echo(f"[WARNING] Failed to parse {bib_path}: {exc}", err=True)
         renderer_md = MarkdownRenderer(
             bib=bib,
             heading_id_style=cfg.heading_id_style,
@@ -192,10 +200,28 @@ def main(
         )
         result = renderer_md.render(east)
         suffix = ".rendered.md"
-    else:
-        click.echo(
-            f"Target '{effective_target}' not yet implemented.", err=True
+    elif effective_target == "html":
+        from md_mid.html import HTMLRenderer
+
+        # Parse .bib file if provided (解析 .bib 文件)
+        bib_html: dict[str, str] = {}
+        if bib_path is not None:
+            from md_mid.bibtex import parse_bib
+
+            try:
+                bib_html = parse_bib(bib_path.read_text(encoding="utf-8"))
+            except Exception as exc:
+                click.echo(f"[WARNING] Failed to parse {bib_path}: {exc}", err=True)
+        renderer_html = HTMLRenderer(
+            mode=cfg.mode,
+            bib=bib_html,
+            locale=cfg.locale,
+            diag=diag,
         )
+        result = renderer_html.render(east)
+        suffix = ".html"
+    else:
+        click.echo(f"Target '{effective_target}' not yet implemented.", err=True)
         raise SystemExit(1)
 
     # 写入输出：stdout 或文件 (Write output: stdout or file)

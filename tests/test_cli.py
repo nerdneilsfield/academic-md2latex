@@ -141,10 +141,7 @@ def test_markdown_with_bib_file(tmp_path) -> None:
     src = tmp_path / "test.mid.md"
     src.write_text("[Wang](cite:wang2024) says hello.\n")
     bib = tmp_path / "refs.bib"
-    bib.write_text(
-        '@article{wang2024, author={Wang, Alice},'
-        ' title={Registration}, year={2024}}\n'
-    )
+    bib.write_text("@article{wang2024, author={Wang, Alice}, title={Registration}, year={2024}}\n")
     out = tmp_path / "out.rendered.md"
     result = CliRunner().invoke(
         main,
@@ -182,7 +179,8 @@ def test_stdin_input(tmp_path) -> None:
     """stdin 输入 (Read from stdin with -)."""
     out = tmp_path / "out.tex"
     result = CliRunner().invoke(
-        main, ["-", "-o", str(out)],
+        main,
+        ["-", "-o", str(out)],
         input="# Hello\n\nWorld.\n",
     )
     assert result.exit_code == 0
@@ -202,7 +200,8 @@ def test_stdout_output(tmp_path) -> None:
 def test_stdin_stdout_pipe(tmp_path) -> None:
     """stdin→stdout 管道 (stdin to stdout pipe)."""
     result = CliRunner().invoke(
-        main, ["-", "-o", "-"],
+        main,
+        ["-", "-o", "-"],
         input="# Hello\n\nWorld.\n",
     )
     assert result.exit_code == 0
@@ -221,9 +220,7 @@ def test_stdout_no_status_message(tmp_path) -> None:
 def test_markdown_locale_english(tmp_path) -> None:
     """--locale en 使用英文标签 (--locale en uses English labels)."""
     src = tmp_path / "t.mid.md"
-    src.write_text(
-        "![x](a.png)\n<!-- caption: Cap -->\n"
-    )
+    src.write_text("![x](a.png)\n<!-- caption: Cap -->\n")
     out = tmp_path / "out.rendered.md"
     result = CliRunner().invoke(
         main, [str(src), "-t", "markdown", "--locale", "en", "-o", str(out)]
@@ -243,9 +240,7 @@ def test_cli_template_option(tmp_path: Path) -> None:
     src = tmp_path / "t.mid.md"
     src.write_text("# Hello\n\nWorld.\n")
     out = tmp_path / "out.tex"
-    result = CliRunner().invoke(
-        main, [str(src), "-o", str(out), "--template", str(tpl)]
-    )
+    result = CliRunner().invoke(main, [str(src), "-o", str(out), "--template", str(tpl)])
     assert result.exit_code == 0
     content = out.read_text()
     assert "\\documentclass[conference]{IEEEtran}" in content
@@ -258,9 +253,7 @@ def test_cli_config_option_thematic_break(tmp_path: Path) -> None:
     src = tmp_path / "t.mid.md"
     src.write_text("---\n\n# Section\n")
     out = tmp_path / "out.tex"
-    result = CliRunner().invoke(
-        main, [str(src), "-o", str(out), "--config", str(cfg)]
-    )
+    result = CliRunner().invoke(main, [str(src), "-o", str(out), "--config", str(cfg)])
     assert result.exit_code == 0
     content = out.read_text()
     assert "\\hrule" in content
@@ -271,9 +264,7 @@ def test_cli_latex_locale_english(tmp_path: Path) -> None:
     src = tmp_path / "t.mid.md"
     src.write_text("# Hello\n\nWorld.\n")
     out = tmp_path / "out.tex"
-    result = CliRunner().invoke(
-        main, [str(src), "-t", "latex", "--locale", "en", "-o", str(out)]
-    )
+    result = CliRunner().invoke(main, [str(src), "-t", "latex", "--locale", "en", "-o", str(out)])
     assert result.exit_code == 0
     content = out.read_text()
     assert "\\renewcommand{\\figurename}{Figure}" in content
@@ -285,9 +276,7 @@ def test_cli_bibliography_mode_none(tmp_path: Path) -> None:
     src = tmp_path / "t.mid.md"
     src.write_text("<!-- bibliography: refs.bib -->\n\n# Intro\n\nText.\n")
     out = tmp_path / "out.tex"
-    result = CliRunner().invoke(
-        main, [str(src), "-o", str(out), "--bibliography-mode", "none"]
-    )
+    result = CliRunner().invoke(main, [str(src), "-o", str(out), "--bibliography-mode", "none"])
     assert result.exit_code == 0
     content = out.read_text()
     assert "\\bibliography" not in content
@@ -308,9 +297,7 @@ def test_cli_config_title_author_injected(tmp_path: Path) -> None:
     src = tmp_path / "t.mid.md"
     src.write_text("# Hello\n\nWorld.\n")
     out = tmp_path / "out.tex"
-    result = CliRunner().invoke(
-        main, [str(src), "-o", str(out), "--config", str(cfg)]
-    )
+    result = CliRunner().invoke(main, [str(src), "-o", str(out), "--config", str(cfg)])
     assert result.exit_code == 0
     content = out.read_text()
     assert "\\title{Config Title}" in content
@@ -330,9 +317,7 @@ def test_cli_default_target_from_config(tmp_path: Path) -> None:
     src = tmp_path / "t.mid.md"
     src.write_text("# Hello\n\nWorld.\n")
     out = tmp_path / "out.rendered.md"
-    result = CliRunner().invoke(
-        main, [str(src), "-o", str(out), "--config", str(cfg)]
-    )
+    result = CliRunner().invoke(main, [str(src), "-o", str(out), "--config", str(cfg)])
     assert result.exit_code == 0
     content = out.read_text()
     # Markdown output, not LaTeX (Markdown 输出而非 LaTeX)
@@ -353,3 +338,41 @@ def test_cli_explicit_mode_overrides_config(tmp_path: Path) -> None:
     assert result.exit_code == 0
     content = out.read_text()
     assert "\\documentclass" in content  # full 模式有前言 (full mode has preamble)
+
+
+# ── Phase 5 Task 2: -t html CLI ─────────────────────────────────────────────
+
+
+def test_html_target_basic(tmp_path: Path) -> None:
+    """--target html produces self-contained HTML (--target html 生成 HTML)."""
+    src = tmp_path / "t.mid.md"
+    src.write_text("# Hello\n\nWorld.\n")
+    out = tmp_path / "out.html"
+    result = CliRunner().invoke(main, [str(src), "-t", "html", "-o", str(out)])
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert "<!DOCTYPE html>" in content
+    assert "<h1" in content
+    assert "Hello" in content
+    assert "mathjax" in content.lower()
+
+
+def test_html_target_math(tmp_path: Path) -> None:
+    """HTML target renders math with MathJax delimiters (HTML 数学公式渲染)."""
+    src = tmp_path / "t.mid.md"
+    src.write_text("Inline $E=mc^2$ and block:\n\n$$x^2=1$$\n")
+    out = tmp_path / "out.html"
+    result = CliRunner().invoke(main, [str(src), "-t", "html", "-o", str(out)])
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert "E=mc^2" in content
+    assert "x^2=1" in content
+
+
+def test_html_default_suffix(tmp_path: Path) -> None:
+    """HTML target default output suffix is .html (默认后缀为 .html)."""
+    src = tmp_path / "t.mid.md"
+    src.write_text("Hello.\n")
+    result = CliRunner().invoke(main, [str(src), "-t", "html"])
+    assert result.exit_code == 0
+    assert (tmp_path / "t.mid.html").exists()
