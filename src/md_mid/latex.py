@@ -12,7 +12,7 @@ from collections.abc import Callable
 from typing import cast
 
 from md_mid.diagnostic import DiagCollector
-from md_mid.escape import escape_latex_with_protection
+from md_mid.escape import escape_latex, escape_latex_with_protection
 from md_mid.nodes import (
     Citation,
     CodeBlock,
@@ -33,6 +33,29 @@ from md_mid.nodes import (
     Table,
     Text,
 )
+
+
+def _escape_url_for_latex(url: str) -> str:
+    """Escape special chars in URL for \\href (URL LaTeX 特殊字符转义).
+
+    Only escapes characters that break LaTeX \\href compilation:
+    backslash, percent, hash, braces.
+    (仅转义会破坏 LaTeX \\href 编译的字符。)
+
+    Args:
+        url: Raw URL string (原始 URL 字符串)
+
+    Returns:
+        Escaped URL safe for \\href first argument (适用于 \\href 第一参数的转义 URL)
+    """
+    return (
+        url.replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("#", "\\#")
+        .replace("{", "\\{")
+        .replace("}", "\\}")
+    )
+
 
 _HEADING_CMDS = {
     1: "section",
@@ -213,9 +236,7 @@ class LaTeXRenderer:
     def render_math_block(self, node: Node) -> str:
         mb = cast(MathBlock, node)
         if label := node.metadata.get("label"):
-            return (
-                f"\\begin{{equation}}\n{mb.content}\n\\label{{{label}}}\n\\end{{equation}}\n"
-            )
+            return f"\\begin{{equation}}\n{mb.content}\n\\label{{{label}}}\n\\end{{equation}}\n"
         return f"\\[\n{mb.content}\n\\]\n"
 
     def render_code_block(self, node: Node) -> str:
@@ -223,11 +244,7 @@ class LaTeXRenderer:
         cb = cast(CodeBlock, node)
         if self.code_style == "minted":
             if cb.language:
-                return (
-                    f"\\begin{{minted}}{{{cb.language}}}\n"
-                    f"{cb.content}\n"
-                    f"\\end{{minted}}\n"
-                )
+                return f"\\begin{{minted}}{{{cb.language}}}\n{cb.content}\n\\end{{minted}}\n"
             # No language: fall back to verbatim (无语言：回退到 verbatim)
             return f"\\begin{{verbatim}}\n{cb.content}\n\\end{{verbatim}}\n"
         # Default: lstlisting (默认：lstlisting)
@@ -461,7 +478,8 @@ class LaTeXRenderer:
 
     def render_code_inline(self, node: Node) -> str:
         ci = cast(CodeInline, node)
-        return f"\\texttt{{{ci.content}}}"
+        # Escape special chars to prevent LaTeX breakage/injection (转义特殊字符防止编译错误/注入)
+        return f"\\texttt{{{escape_latex(ci.content)}}}"
 
     def render_math_inline(self, node: Node) -> str:
         mi = cast(MathInline, node)
@@ -470,7 +488,8 @@ class LaTeXRenderer:
     def render_link(self, node: Node) -> str:
         lnk = cast(Link, node)
         text = self.render_children(node)
-        return f"\\href{{{lnk.url}}}{{{text}}}"
+        # Escape URL special chars for LaTeX \href (转义 URL 特殊字符)
+        return f"\\href{{{_escape_url_for_latex(lnk.url)}}}{{{text}}}"
 
     def render_softbreak(self, node: Node) -> str:
         return "\n"
