@@ -231,7 +231,16 @@ def _process_environments_in(children: list[Node], diag: DiagCollector) -> None:
     """在一个子节点列表中查找并处理 begin/end 对。
 
     Find and process begin/end pairs in a children list.
+    Pre-scans for end directives to avoid O(n²) on orphan begins
+    (预扫描 end 指令，避免孤立 begin 导致 O(n²) 扫描).
     """
+    # Pre-scan: collect env names that have end directives (预扫描有 end 指令的环境名)
+    names_with_ends: set[str] = set()
+    for child in children:
+        parsed = _parse_comment(child)
+        if parsed is not None and parsed[0] == "end":
+            names_with_ends.add(str(parsed[1]).strip())
+
     i = 0
     while i < len(children):
         child = children[i]
@@ -240,6 +249,14 @@ def _process_environments_in(children: list[Node], diag: DiagCollector) -> None:
             key, value = parsed
             if key == "begin":
                 env_name = str(value).strip()
+                # Fast-reject orphan begins without scanning (快速排除无匹配 end 的孤立 begin)
+                if env_name not in names_with_ends:
+                    diag.error(
+                        f"Unmatched <!-- begin: {env_name} -->",
+                        _pos_from_node(child),
+                    )
+                    i += 1
+                    continue
                 end_idx = _find_matching_end(children, i + 1, env_name)
                 if end_idx is None:
                     diag.error(
