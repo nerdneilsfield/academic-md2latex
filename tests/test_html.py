@@ -12,8 +12,11 @@ from md_mid.nodes import (
     Document,
     Emphasis,
     Figure,
+    FootnoteDef,
+    FootnoteRef,
     HardBreak,
     Heading,
+    Image,
     Link,
     List,
     ListItem,
@@ -401,3 +404,176 @@ class TestHtmlCitation:
         cit = Citation(keys=["key<evil>"])
         result = render(doc(Paragraph(children=[cit])))
         assert "<evil>" not in result
+
+
+# ── Fix A: Width XSS injection ───────────────────────────────────────────────
+
+
+class TestHtmlFigureWidthXss:
+    """Width attribute XSS injection is blocked (宽度属性 XSS 注入阻止测试)."""
+
+    def test_figure_width_xss_blocked(self) -> None:
+        """Malicious width produces no style attr (恶意宽度不产生 style 属性)."""
+        fig = Figure(
+            src="a.png",
+            alt="A",
+            metadata={"caption": "Cap", "width": "100%;background:url(evil)"},
+        )
+        result = render(doc(fig), mode="fragment")
+        assert "style=" not in result
+        assert "evil" not in result
+
+    def test_figure_width_valid_unit(self) -> None:
+        """Valid width produces correct style attr (合法宽度产生正确 style 属性)."""
+        fig = Figure(
+            src="a.png",
+            alt="A",
+            metadata={"caption": "Cap", "width": "80%"},
+        )
+        result = render(doc(fig), mode="fragment")
+        assert 'style="max-width:80%"' in result
+
+
+# ── Fix B: Footnote ref sequential numbering ─────────────────────────────────
+
+
+class TestHtmlFootnoteRefSequential:
+    """Footnote ref renders sequential number (脚注引用序号渲染测试)."""
+
+    def test_footnote_ref_sequential_number(self) -> None:
+        """Footnote ref renders [1] not [fn] (脚注引用渲染 [1] 而非 [fn])."""
+        fr = FootnoteRef(ref_id="note1")
+        result = render(doc(Paragraph(children=[fr])))
+        assert "[1]" in result
+        assert "[fn]" not in result
+
+    def test_footnote_ref_multiple_sequential(self) -> None:
+        """Two distinct refs render [1], [2] (两个不同脚注引用渲染 [1], [2])."""
+        fr1 = FootnoteRef(ref_id="note1")
+        fr2 = FootnoteRef(ref_id="note2")
+        result = render(doc(Paragraph(children=[fr1, fr2])))
+        assert "[1]" in result
+        assert "[2]" in result
+
+
+# ── Fix C: Link scheme whitespace bypass ──────────────────────────────────────
+
+
+class TestHtmlLinkSchemeBypass:
+    """Leading whitespace in URL doesn't bypass scheme check (URL 前置空白绕过测试)."""
+
+    def test_link_scheme_whitespace_bypass_blocked(self) -> None:
+        """' javascript:x' renders text only, no href (前置空白不绕过)."""
+        p = Paragraph(
+            children=[
+                Link(url=" javascript:alert(1)", children=[Text(content="click")]),
+            ]
+        )
+        result = render(doc(p))
+        assert "javascript:" not in result
+        assert "click" in result
+        assert "href" not in result
+
+
+# ── Fix H: Image lazy loading ─────────────────────────────────────────────────
+
+
+class TestHtmlLazyLoading:
+    """Images have loading='lazy' attribute (图片懒加载属性测试)."""
+
+    def test_figure_lazy_loading(self) -> None:
+        """Figure img has loading='lazy' (图有 loading='lazy' 属性)."""
+        fig = Figure(src="a.png", alt="A", metadata={"caption": "Cap"})
+        result = render(doc(fig), mode="fragment")
+        assert 'loading="lazy"' in result
+
+    def test_image_lazy_loading(self) -> None:
+        """Plain image has loading='lazy' (普通图片有 loading='lazy' 属性)."""
+        img = Image(src="a.png", alt="A")
+        result = render(doc(Paragraph(children=[img])), mode="fragment")
+        assert 'loading="lazy"' in result
+
+
+# ── P0-3: Link control character bypass ──────────────────────────────────────
+
+
+class TestHtmlLinkControlCharBypass:
+    """Control characters in URL scheme don't bypass check (URL 中控制字符不绕过检查)."""
+
+    def test_link_tab_in_scheme_blocked(self) -> None:
+        """'java\\tscript:alert(1)' renders text only, no href (制表符不绕过)."""
+        p = Paragraph(
+            children=[
+                Link(
+                    url="java\tscript:alert(1)",
+                    children=[Text(content="click")],
+                ),
+            ]
+        )
+        result = render(doc(p))
+        assert "click" in result
+        assert "href" not in result
+
+
+# ── P0-4: Raw block sanitization ─────────────────────────────────────────────
+
+
+class TestHtmlRawBlockSanitize:
+    """Raw HTML blocks are sanitized through allowlist (原始 HTML 块白名单清洗测试)."""
+
+    def test_raw_html_script_stripped(self) -> None:
+        """Script tags and content are removed (script 标签及内容被移除)."""
+        rb = RawBlock(content="<script>alert(1)</script><p>ok</p>", kind="html")
+        result = render(doc(rb), mode="fragment")
+        assert "<p>ok</p>" in result
+        assert "<script>" not in result
+        assert "alert" not in result
+
+    def test_raw_html_safe_div_preserved(self) -> None:
+        """Safe div with class is preserved (安全 div 保留)."""
+        rb = RawBlock(content='<div class="note">text</div>', kind="html")
+        result = render(doc(rb), mode="fragment")
+        assert '<div class="note">text</div>' in result
+
+    def test_raw_html_event_handler_stripped(self) -> None:
+        """Event handler attributes are stripped (事件处理器属性被移除)."""
+        rb = RawBlock(content='<p onclick="evil()">text</p>', kind="html")
+        result = render(doc(rb), mode="fragment")
+        assert "<p>text</p>" in result
+        assert "onclick" not in result
+
+
+# ── P1-1: Footnote list order matches ref numbering ──────────────────────────
+
+
+class TestHtmlFootnoteOrder:
+    """Footnote list order matches ref encounter order (脚注列表顺序匹配引用出现顺序)."""
+
+    def test_footnote_list_matches_ref_order(self) -> None:
+        """Footnotes defined b-then-a but referenced a-then-b → list outputs a before b.
+
+        脚注定义顺序 b 在 a 前，但引用顺序 a 在 b 前 → 列表输出 a 在 b 前。
+        """
+        # Define footnote [^b] first, then [^a] (先定义 b 再定义 a)
+        fn_def_b = FootnoteDef(def_id="b", children=[Text(content="B content")])
+        fn_def_a = FootnoteDef(def_id="a", children=[Text(content="A content")])
+        # Reference [^a] first, then [^b] in text (在文本中先引用 a 再引用 b)
+        fn_ref_a = FootnoteRef(ref_id="a")
+        fn_ref_b = FootnoteRef(ref_id="b")
+        d = doc(
+            fn_def_b,
+            fn_def_a,
+            Paragraph(children=[
+                Text(content="See "),
+                fn_ref_a,
+                Text(content=" and "),
+                fn_ref_b,
+            ]),
+        )
+        result = HTMLRenderer(mode="body").render(d)
+        # [^a] was ref'd first → should appear first in <ol> (a 先引用故在列表中靠前)
+        pos_a = result.find('id="fn-a"')
+        pos_b = result.find('id="fn-b"')
+        assert pos_a != -1, "Footnote a should appear in output (脚注 a 应出现在输出中)"
+        assert pos_b != -1, "Footnote b should appear in output (脚注 b 应出现在输出中)"
+        assert pos_a < pos_b, "Footnote a should appear before b (脚注 a 应在 b 之前)"

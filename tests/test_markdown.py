@@ -151,11 +151,13 @@ class TestCrossRef:
 
     def test_cross_ref_in_sentence(self) -> None:
         """CrossRef inline with text (交叉引用在句子中)."""
-        p = Paragraph(children=[
-            Text(content="如"),
-            CrossRef(label="fig:a", display_text="图1"),
-            Text(content="所示"),
-        ])
+        p = Paragraph(
+            children=[
+                Text(content="如"),
+                CrossRef(label="fig:a", display_text="图1"),
+                Text(content="所示"),
+            ]
+        )
         result = render(doc(p))
         assert '如<a href="#fig:a">图1</a>所示' in result
 
@@ -247,11 +249,13 @@ class TestCitation:
 
     def test_cite_keys_ordered_in_footnotes(self) -> None:
         """Footnote definitions follow citation order (脚注定义按引用顺序)."""
-        p = Paragraph(children=[
-            Citation(keys=["a"], display_text="A"),
-            Text(content=" and "),
-            Citation(keys=["b"], display_text="B"),
-        ])
+        p = Paragraph(
+            children=[
+                Citation(keys=["a"], display_text="A"),
+                Text(content=" and "),
+                Citation(keys=["b"], display_text="B"),
+            ]
+        )
         result = render(doc(p))
         pos_a = result.find("[^a]: a")
         pos_b = result.find("[^b]: b")
@@ -340,17 +344,17 @@ class TestNestedList:
         """嵌套无序列表缩进 (Nested unordered list is indented)."""
         inner = List(
             ordered=False,
-            children=[
-                ListItem(children=[Paragraph(children=[Text(content="nested")])])
-            ],
+            children=[ListItem(children=[Paragraph(children=[Text(content="nested")])])],
         )
         outer = List(
             ordered=False,
             children=[
-                ListItem(children=[
-                    Paragraph(children=[Text(content="top")]),
-                    inner,
-                ])
+                ListItem(
+                    children=[
+                        Paragraph(children=[Text(content="top")]),
+                        inner,
+                    ]
+                )
             ],
         )
         result = render(doc(outer))
@@ -365,17 +369,17 @@ class TestNestedList:
         """嵌套有序列表缩进 (Nested ordered list is indented)."""
         inner = List(
             ordered=True,
-            children=[
-                ListItem(children=[Paragraph(children=[Text(content="sub")])])
-            ],
+            children=[ListItem(children=[Paragraph(children=[Text(content="sub")])])],
         )
         outer = List(
             ordered=True,
             children=[
-                ListItem(children=[
-                    Paragraph(children=[Text(content="main")]),
-                    inner,
-                ])
+                ListItem(
+                    children=[
+                        Paragraph(children=[Text(content="main")]),
+                        inner,
+                    ]
+                )
             ],
         )
         result = render(doc(outer))
@@ -386,21 +390,32 @@ class TestNestedList:
 
     def test_deeply_nested_list(self) -> None:
         """深层嵌套列表 (Deeply nested list has increasing indent)."""
-        l3 = List(ordered=False, children=[
-            ListItem(children=[Paragraph(children=[Text(content="deep")])])
-        ])
-        l2 = List(ordered=False, children=[
-            ListItem(children=[
-                Paragraph(children=[Text(content="mid")]),
-                l3,
-            ])
-        ])
-        l1 = List(ordered=False, children=[
-            ListItem(children=[
-                Paragraph(children=[Text(content="top")]),
-                l2,
-            ])
-        ])
+        l3 = List(
+            ordered=False,
+            children=[ListItem(children=[Paragraph(children=[Text(content="deep")])])],
+        )
+        l2 = List(
+            ordered=False,
+            children=[
+                ListItem(
+                    children=[
+                        Paragraph(children=[Text(content="mid")]),
+                        l3,
+                    ]
+                )
+            ],
+        )
+        l1 = List(
+            ordered=False,
+            children=[
+                ListItem(
+                    children=[
+                        Paragraph(children=[Text(content="top")]),
+                        l2,
+                    ]
+                )
+            ],
+        )
         result = render(doc(l1))
         lines = result.strip().split("\n")
         deep_line = [ln for ln in lines if "deep" in ln][0]
@@ -419,10 +434,12 @@ class TestNestedList:
         outer = List(
             ordered=False,
             children=[
-                ListItem(children=[
-                    Paragraph(children=[Text(content="top")]),
-                    inner,
-                ])
+                ListItem(
+                    children=[
+                        Paragraph(children=[Text(content="top")]),
+                        inner,
+                    ]
+                )
             ],
         )
         result = render(doc(outer))
@@ -432,10 +449,12 @@ class TestNestedList:
 
     def test_list_item_with_code_block(self) -> None:
         """列表项含代码块 (List item with code block, indent preserved)."""
-        item = ListItem(children=[
-            Paragraph(children=[Text(content="example:")]),
-            CodeBlock(content="x = 1", language="python"),
-        ])
+        item = ListItem(
+            children=[
+                Paragraph(children=[Text(content="example:")]),
+                CodeBlock(content="x = 1", language="python"),
+            ]
+        )
         lst = List(ordered=False, children=[item])
         result = render(doc(lst))
         assert "- example:" in result
@@ -642,9 +661,11 @@ class TestMarkdownModes:
     def test_body_mode_has_footnotes(self) -> None:
         """body 模式含脚注 (Body mode includes footnotes)."""
         d = doc(
-            Paragraph(children=[
-                Citation(keys=["k1"], display_text="A"),
-            ])
+            Paragraph(
+                children=[
+                    Citation(keys=["k1"], display_text="A"),
+                ]
+            )
         )
         result = MarkdownRenderer(mode="body").render(d)
         assert "[^k1]:" in result
@@ -652,9 +673,11 @@ class TestMarkdownModes:
     def test_fragment_mode_no_front_matter_no_footnotes(self) -> None:
         """fragment 模式无前言无脚注 (Fragment mode: no FM, no footnotes)."""
         d = doc(
-            Paragraph(children=[
-                Citation(keys=["k1"], display_text="A"),
-            ])
+            Paragraph(
+                children=[
+                    Citation(keys=["k1"], display_text="A"),
+                ]
+            )
         )
         d.metadata["title"] = "Paper"
         result = MarkdownRenderer(mode="fragment").render(d)
@@ -727,6 +750,7 @@ class TestFrontMatter:
     def test_multiline_front_matter_valid_yaml(self) -> None:
         """多行前言可解析为合法 YAML (Multi-line FM parseable as valid YAML)."""
         from ruamel.yaml import YAML
+
         d = doc()
         d.metadata["title"] = "Paper"
         d.metadata["abstract"] = "L1\nL2"
@@ -827,6 +851,7 @@ class TestHtmlPassthrough:
     def test_html_block_passthrough(self) -> None:
         """Fix C: HTML block 透传为原始内容 (HTML block passes through as-is)."""
         from md_mid.nodes import RawBlock
+
         rb = RawBlock(content="<div>hello</div>", kind="html")
         result = render(doc(rb))
         assert "<div>hello</div>" in result
@@ -835,6 +860,7 @@ class TestHtmlPassthrough:
     def test_html_inline_passthrough(self) -> None:
         """Fix C: HTML inline 透传为原始内容 (HTML inline passes through as-is)."""
         from md_mid.nodes import RawBlock
+
         rb = RawBlock(content="<span>hi</span>", kind="html")
         result = render(doc(rb))
         assert "<span>hi</span>" in result
@@ -843,6 +869,7 @@ class TestHtmlPassthrough:
     def test_latex_raw_block_details_fold(self) -> None:
         """Fix C: LaTeX 块仍被折叠 (LaTeX raw block wrapped in details fold)."""
         from md_mid.nodes import RawBlock
+
         rb = RawBlock(content="\\newcommand{\\myvec}{\\mathbf}", kind="latex")
         result = render(doc(rb))
         assert "<details>" in result
@@ -859,6 +886,7 @@ class TestNativeFootnoteDef:
     def test_native_footnote_def_rendered(self) -> None:
         """Fix E: 原生脚注定义出现在输出末尾 (Native footnote def appears at end of output)."""
         from md_mid.parser import parse as md_parse
+
         # Note: markdown-it-py footnote plugin uses 0-indexed internal IDs (脚注插件使用 0 起始 ID)
         src = "See[^note] this.\n\n[^note]: My note text\n"
         d = md_parse(src)
@@ -869,18 +897,61 @@ class TestNativeFootnoteDef:
     def test_native_footnote_def_and_citation_both_rendered(self) -> None:
         """Fix E: 原生脚注和引用脚注都出现在输出中 (Both native and citation footnotes appear)."""
         from md_mid.nodes import FootnoteDef
+
         # Build AST directly with a Citation and a native FootnoteDef (直接构建含引用和脚注的 AST)
         bib = {"smith2024": "Smith, 2024"}
         fn_def = FootnoteDef(
             def_id="myref",
             children=[Paragraph(children=[Text(content="My note")])],
         )
-        p = Paragraph(children=[
-            Text(content="See "),
-            Citation(keys=["smith2024"]),
-        ])
+        p = Paragraph(
+            children=[
+                Text(content="See "),
+                Citation(keys=["smith2024"]),
+            ]
+        )
         d = Document(children=[p, fn_def])
         result = MarkdownRenderer(bib=bib, mode="body").render(d)
         # Both native footnote def and citation footnote should appear (两者均应出现)
         assert "]: My note" in result
         assert "[^smith2024]: Smith, 2024" in result
+
+
+# ── P0-5: State leak regression test ──────────────────────────────────────────
+
+
+class TestStateLeak:
+    """Renderer state leak regression tests (渲染器状态泄露回归测试)."""
+
+    def test_markdown_renderer_no_state_leak(self) -> None:
+        """Second render() call must not carry stale footnote defs from first call.
+
+        第二次 render() 调用不应携带第一次调用残留的脚注定义。
+        """
+        from md_mid.nodes import FootnoteDef, FootnoteRef
+
+        # Doc A: has a footnote definition (文档 A：含脚注定义)
+        fn_def = FootnoteDef(
+            def_id="leak",
+            children=[Paragraph(children=[Text(content="Leaked note")])],
+        )
+        ref = FootnoteRef(ref_id="leak")
+        doc_a = Document(
+            children=[
+                Paragraph(children=[Text(content="See"), ref]),
+                fn_def,
+            ]
+        )
+
+        # Doc B: no footnotes at all (文档 B：无任何脚注)
+        doc_b = Document(
+            children=[Paragraph(children=[Text(content="Clean doc.")])],
+        )
+
+        renderer = MarkdownRenderer(mode="body")
+        renderer.render(doc_a)  # First render populates _native_fn_defs (第一次渲染填充脚注)
+        result_b = renderer.render(doc_b)  # Second render must be clean (第二次渲染应干净)
+
+        # Doc B output must not contain any footnote definitions (文档 B 不应有脚注定义)
+        assert "[^leak]:" not in result_b
+        assert "Leaked note" not in result_b

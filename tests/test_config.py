@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from md_mid.config import MdMidConfig, load_config_file, load_template, resolve_config
 
 
@@ -44,11 +46,11 @@ def test_resolve_config_priority_chain() -> None:
         config_dict={"code-style": "minted"},
         template_dict={"bibstyle": "IEEEtran"},
     )
-    assert cfg.mode == "body"              # from CLI (来自 CLI)
+    assert cfg.mode == "body"  # from CLI (来自 CLI)
     assert cfg.documentclass == "report"  # from doc directives (来自文档指令)
-    assert cfg.code_style == "minted"     # from config file (来自配置文件)
-    assert cfg.bibstyle == "IEEEtran"     # from template (来自模板)
-    assert cfg.target == "latex"          # from defaults (来自默认值)
+    assert cfg.code_style == "minted"  # from config file (来自配置文件)
+    assert cfg.bibstyle == "IEEEtran"  # from template (来自模板)
+    assert cfg.target == "latex"  # from defaults (来自默认值)
 
 
 def test_resolve_config_higher_priority_wins() -> None:
@@ -180,3 +182,18 @@ def test_load_template_extra_preamble_mapped(tmp_path: Path) -> None:
     d = load_template(tpl)
     assert "preamble" in d
     assert "extra-preamble" not in d
+
+
+# ── P1-2: Config type validation ─────────────────────────────────────────────
+
+
+def test_config_type_error_classoptions_int() -> None:
+    """classoptions as int raises TypeError (classoptions 为 int 时抛出 TypeError)."""
+    with pytest.raises(TypeError, match="classoptions"):
+        MdMidConfig.from_dict({"classoptions": 12})
+
+
+def test_config_type_error_packages_str() -> None:
+    """packages as str raises TypeError (packages 为 str 时抛出 TypeError)."""
+    with pytest.raises(TypeError, match="packages"):
+        MdMidConfig.from_dict({"packages": "numpy"})

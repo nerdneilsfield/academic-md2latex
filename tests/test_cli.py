@@ -381,22 +381,69 @@ def test_html_default_suffix(tmp_path: Path) -> None:
 # ── Phase 5 Task 4: --generate-figures CLI ───────────────────────────────────
 
 
+def test_html_config_title_injected(tmp_path: Path) -> None:
+    """Config title appears in HTML <title> tag (配置标题出现在 HTML title 标签中)."""
+    cfg = tmp_path / "md-mid.yaml"
+    cfg.write_text("title: My HTML Title\n")
+    src = tmp_path / "t.mid.md"
+    src.write_text("# Hello\n\nWorld.\n")
+    out = tmp_path / "out.html"
+    result = CliRunner().invoke(
+        main, [str(src), "-t", "html", "-o", str(out), "--config", str(cfg)]
+    )
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert "<title>My HTML Title</title>" in content
+
+
+def test_invalid_target_exits_before_side_effects(tmp_path: Path) -> None:
+    """Invalid target from config exits before generate-figures runs.
+
+    配置中无效目标在 generate-figures 执行前退出。
+    """
+    cfg = tmp_path / "md-mid.yaml"
+    cfg.write_text("default-target: invalid\n")
+    src = tmp_path / "t.mid.md"
+    src.write_text("# Hello\n\nWorld.\n")
+    # Create a dummy runner that raises on load — should NOT be reached
+    # (创建加载时抛异常的假 runner — 不应被执行)
+    runner = tmp_path / "dummy_runner.py"
+    runner.write_text("raise RuntimeError('Runner should not be loaded')\n")
+    result = CliRunner().invoke(
+        main,
+        [
+            str(src),
+            "--config",
+            str(cfg),
+            "--generate-figures",
+            "--figures-runner",
+            str(runner),
+        ],
+    )
+    # Should exit with error mentioning "not yet implemented" (应退出并提示 "not yet implemented")
+    assert result.exit_code != 0
+    assert "not yet implemented" in result.output.lower()
+
+
 def test_generate_figures_flag_no_runner_exits(tmp_path: Path) -> None:
     """--generate-figures with missing runner exits non-zero (无 runner 时退出非零)."""
     src = tmp_path / "t.mid.md"
     # Include a figure with AI metadata so the runner is actually needed
     # (包含 AI 元数据的图，使 runner 被实际加载)
     src.write_text(
-        "# Hello\n\n"
-        "![alt](gen.png)\n"
-        "<!-- ai-generated: true -->\n"
-        "<!-- ai-prompt: blue sky -->\n"
+        "# Hello\n\n![alt](gen.png)\n<!-- ai-generated: true -->\n<!-- ai-prompt: blue sky -->\n"
     )
     out = tmp_path / "out.tex"
     result = CliRunner().invoke(
         main,
-        [str(src), "-o", str(out), "--generate-figures",
-         "--figures-runner", str(tmp_path / "nonexistent.py")],
+        [
+            str(src),
+            "-o",
+            str(out),
+            "--generate-figures",
+            "--figures-runner",
+            str(tmp_path / "nonexistent.py"),
+        ],
     )
     # Should fail because runner does not exist (runner 不存在，应失败)
     assert result.exit_code != 0

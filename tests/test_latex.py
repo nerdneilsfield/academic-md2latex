@@ -595,11 +595,13 @@ class TestLatexFootnotes:
             def_id="0",
             children=[Paragraph(children=[Text(content="My note")])],
         )
-        p = Paragraph(children=[
-            Text(content="See this"),
-            FootnoteRef(ref_id="0"),
-            Text(content=" and more."),
-        ])
+        p = Paragraph(
+            children=[
+                Text(content="See this"),
+                FootnoteRef(ref_id="0"),
+                Text(content=" and more."),
+            ]
+        )
         doc = Document(children=[p, fn_def])
         result = render(doc)
         assert "\\footnote{My note}" in result
@@ -612,10 +614,12 @@ class TestLatexFootnotes:
         When a FootnoteRef has no matching def, produces \\footnote{[ref_id]}.
         (当 FootnoteRef 没有匹配定义时，产出 \\footnote{[ref_id]}。)
         """
-        p = Paragraph(children=[
-            Text(content="See this"),
-            FootnoteRef(ref_id="999"),
-        ])
+        p = Paragraph(
+            children=[
+                Text(content="See this"),
+                FootnoteRef(ref_id="999"),
+            ]
+        )
         doc = Document(children=[p])
         result = render(doc)
         # No crash, produces the [ref_id] fallback marker (不崩溃，产出 [ref_id] 回退标记)
@@ -629,12 +633,14 @@ class TestLatexFootnotes:
         """
         fn1 = FootnoteDef(def_id="0", children=[Paragraph(children=[Text(content="Note A")])])
         fn2 = FootnoteDef(def_id="1", children=[Paragraph(children=[Text(content="Note B")])])
-        p = Paragraph(children=[
-            Text(content="First"),
-            FootnoteRef(ref_id="0"),
-            Text(content=" second"),
-            FootnoteRef(ref_id="1"),
-        ])
+        p = Paragraph(
+            children=[
+                Text(content="First"),
+                FootnoteRef(ref_id="0"),
+                Text(content=" second"),
+                FootnoteRef(ref_id="1"),
+            ]
+        )
         doc = Document(children=[p, fn1, fn2])
         result = render(doc)
         assert "\\footnote{Note A}" in result
@@ -705,3 +711,40 @@ class TestLatexLocale:
         result = LaTeXRenderer(locale="zh").render(doc)
         assert "\\renewcommand{\\figurename}" not in result
         assert "\\renewcommand{\\tablename}" not in result
+
+
+# ── P0-1: CodeInline escaping ─────────────────────────────────────────────────
+
+
+class TestCodeInlineEscaping:
+    """Code inline LaTeX escaping tests (行内代码 LaTeX 转义测试)."""
+
+    def test_code_inline_escapes_special_chars(self) -> None:
+        """Code inline content with _ and {} is escaped for LaTeX.
+
+        行内代码中的 _ 和 {} 被转义以防止 LaTeX 编译错误。
+        """
+        ci = CodeInline(content="a_b{c}")
+        result = LaTeXRenderer().render(ci)
+        assert r"\texttt{a\_b\{c\}}" == result
+
+
+# ── P0-2: Link URL escaping ──────────────────────────────────────────────────
+
+
+class TestLinkUrlEscaping:
+    """Link URL LaTeX escaping tests (链接 URL LaTeX 转义测试)."""
+
+    def test_link_url_escapes_percent(self) -> None:
+        """URL with % and # is escaped in \\href.
+
+        URL 中的 % 和 # 在 \\href 中被转义。
+        """
+        lnk = Link(url="https://x.com/a%20b#sec", children=[Text(content="click")])
+        result = LaTeXRenderer().render(lnk)
+        # % and # must be backslash-escaped (% 和 # 必须被反斜杠转义)
+        assert r"\%" in result
+        assert r"\#" in result
+        # Raw unescaped % and # must NOT appear in the URL portion (原始未转义字符不应出现)
+        # Extract the \href{...} URL portion (提取 \href{...} 中的 URL 部分)
+        assert r"\href{https://x.com/a\%20b\#sec}{click}" == result

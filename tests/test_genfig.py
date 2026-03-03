@@ -1,4 +1,5 @@
 """Tests for optional generate-figures feature (可选出图功能测试)."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -77,12 +78,15 @@ class TestCollectJobs:
 
     def test_job_has_model_and_params(self) -> None:
         """Collected job carries model and params (作业携带 model 和 params)."""
-        fig = _fig("fig.png", {
-            "generated": True,
-            "prompt": "technical diagram",
-            "model": "midjourney-v6",
-            "params": {"seed": 42},
-        })
+        fig = _fig(
+            "fig.png",
+            {
+                "generated": True,
+                "prompt": "technical diagram",
+                "model": "midjourney-v6",
+                "params": {"seed": 42},
+            },
+        )
         d = Document(children=[fig])
         jobs = collect_jobs(d, base_dir=Path("/tmp"))
         assert jobs[0].model == "midjourney-v6"
@@ -156,6 +160,21 @@ class TestGenerateFigureJob:
         mock_runner = MagicMock()
         mock_runner.generate_image.return_value = 0  # claims success (声称成功)
         # But output file is NOT created (但未创建输出文件)
+
+        ok = generate_figure_job(job, runner=mock_runner, config=None)
+        assert ok is False
+
+    def test_runner_exception_returns_false(self, tmp_path: Path) -> None:
+        """Runner that raises exception returns False (runner 抛异常返回 False)."""
+        job = FigureJob(
+            src="out.png",
+            output_path=tmp_path / "out.png",
+            prompt="sky",
+            model=None,
+            params=None,
+        )
+        mock_runner = MagicMock()
+        mock_runner.generate_image.side_effect = RuntimeError("network error")
 
         ok = generate_figure_job(job, runner=mock_runner, config=None)
         assert ok is False
