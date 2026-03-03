@@ -20,6 +20,7 @@ from md_mid.nodes import (
     Document,
     Emphasis,
     Figure,
+    FootnoteDef,
     FootnoteRef,
     HardBreak,
     Heading,
@@ -41,6 +42,23 @@ from md_mid.nodes import (
 def _esc(text: str) -> str:
     """Escape HTML special characters for attributes and content (HTML 特殊字符转义)."""
     return _html.escape(text, quote=True)
+
+
+def _yaml_safe_scalar(val: str) -> str:
+    """Wrap YAML scalar in quotes if it contains unsafe characters (按需引号包裹 YAML 标量).
+
+    Args:
+        val: Raw scalar value (原始标量值)
+
+    Returns:
+        Quoted string if needed, else val unchanged (需要时返回引号包裹的字符串)
+    """
+    # Characters that make a bare YAML scalar ambiguous (使裸标量产生歧义的字符)
+    UNSAFE = ('#', '[', '{', '!', '&', '*', '?', '|', '>', "'", '"')
+    if any(val.startswith(c) for c in UNSAFE) or ':' in val:
+        escaped = val.replace('\\', '\\\\').replace('"', '\\"')
+        return f'"{escaped}"'
+    return val
 
 
 @dataclass
@@ -92,6 +110,7 @@ class MarkdownRenderer:
         self._fig_count: int = 0  # 图计数器 (figure counter)
         self._tab_count: int = 0  # 表计数器 (table counter)
         self._list_depth: int = 0  # 列表嵌套深度 (list nesting depth)
+        self._native_fn_defs: dict[str, str] = {}  # native footnote defs (原生脚注定义)
 
     def render(self, doc: Document) -> str:
         """渲染文档为 Rich Markdown (Render document to Rich Markdown).
@@ -191,20 +210,20 @@ class MarkdownRenderer:
                     indented = "\n".join(f"  {line}" for line in val_str.split("\n"))
                     lines.append(f"{key}: |\n{indented}")
                 else:
-                    lines.append(f"{key}: {val_str}")
+                    lines.append(f"{key}: {_yaml_safe_scalar(val_str)}")
         if not lines:
             return ""
         return "---\n" + "\n".join(lines) + "\n---\n"
 
     def _render_footnotes(self) -> str:
         """渲染脚注定义 (Render footnote definitions at end)."""
-        if not self._index.cite_keys:
-            return ""
         defs: list[str] = []
         for key in self._index.cite_keys:
             content = self._bib.get(key, key)
             defs.append(f"[^{key}]: {content}")
-        return "\n".join(defs) + "\n"
+        for def_id, content in self._native_fn_defs.items():
+            defs.append(f"[^{def_id}]: {content}")
+        return ("\n".join(defs) + "\n") if defs else ""
 
     # ── Block nodes ──────────────────────────────────────────────
 
@@ -415,8 +434,12 @@ class MarkdownRenderer:
         return self._render_children(node)
 
     def _render_raw_block(self, node: Node) -> str:
-        """原始 LaTeX 块 → 折叠块 (Raw LaTeX → details fold)."""
+        """原始块渲染 (Raw block: HTML passthrough or LaTeX details fold)."""
         rb = cast(RawBlock, node)
+        if rb.kind == "html":
+            # HTML inline/block: pass through as-is (HTML 原样透传)
+            return rb.content
+        # LaTeX raw block: wrap in details fold (LaTeX 块：折叠显示)
         return (
             "<details>\n"
             "<summary>📄 Raw LaTeX</summary>\n\n"
@@ -447,7 +470,7 @@ class MarkdownRenderer:
         if isinstance(node, CodeInline):
             return f"<code>{_esc(node.content)}</code>"
         if isinstance(node, MathInline):
-            return f"${node.content}$"
+            return f"${_esc(node.content)}$"
         if isinstance(node, Link):
             text = self._render_cell_html(node.children)
             return f'<a href="{_esc(node.url)}">{text}</a>'
@@ -519,5 +542,9 @@ class MarkdownRenderer:
         return f"[^{fr.ref_id}]"
 
     def _render_footnote_def(self, node: Node) -> str:
-        """脚注定义 — 跳过 (Footnote def — skipped, at end)."""
+        """脚注定义 — 收集备用 (Footnote def — collect for end-of-doc output)."""
+        fd = cast(FootnoteDef, node)
+        # Render children as text and store for end-of-doc emission (渲染子节点为文本并存储)
+        content = self._render_children(node).strip()
+        self._native_fn_defs[fd.def_id] = content
         return ""
