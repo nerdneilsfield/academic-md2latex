@@ -195,7 +195,7 @@ def _build_math_block(node: SyntaxTreeNode) -> MathBlock:
 
 def _build_html_block(node: SyntaxTreeNode) -> RawBlock:
     content = (node.content or "").strip()
-    return RawBlock(content=content, position=_position_from_map(node))
+    return RawBlock(content=content, kind="html", position=_position_from_map(node))
 
 
 def _build_table(node: SyntaxTreeNode) -> Table:
@@ -302,7 +302,7 @@ def _build_image(node: SyntaxTreeNode) -> Image:
 
 def _build_html_inline(node: SyntaxTreeNode) -> RawBlock:
     content = (node.content or "").strip()
-    return RawBlock(content=content)
+    return RawBlock(content=content, kind="html")
 
 
 def _build_footnote_ref(node: SyntaxTreeNode) -> FootnoteRef:

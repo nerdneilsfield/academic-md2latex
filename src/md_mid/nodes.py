@@ -170,6 +170,9 @@ class Environment(Node):
 @dataclass
 class RawBlock(Node):
     content: str = ""
+    # "latex" = raw LaTeX begin block; "html" = html_block/html_inline passthrough
+    # (原始块类型：latex 原始 LaTeX 块，html 为 html_block/html_inline 透传)
+    kind: str = "latex"
 
     @property
     def type(self) -> str:
