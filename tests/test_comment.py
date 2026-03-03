@@ -124,10 +124,7 @@ def test_env_level_options_attached_to_environment() -> None:
 def test_env_level_label_attached_to_environment() -> None:
     """环境级 label 指令附着到 Environment.metadata（Env-level label attached to env）."""
     text = (
-        "<!-- begin: algorithm -->\n"
-        "<!-- label: alg:sort -->\n"
-        "Sort step\n"
-        "<!-- end: algorithm -->\n"
+        "<!-- begin: algorithm -->\n<!-- label: alg:sort -->\nSort step\n<!-- end: algorithm -->\n"
     )
     doc = parse(text)
     east = process_comments(doc, "test.md")
@@ -287,8 +284,7 @@ def test_include_tex_path_traversal_rejected(tmp_path: Path) -> None:
     process_comments(doc, str(src), diag=dc)
     assert dc.has_errors
     assert any(
-        "traversal" in d.message.lower() or "outside" in d.message.lower()
-        for d in dc.errors
+        "traversal" in d.message.lower() or "outside" in d.message.lower() for d in dc.errors
     )
 
 

@@ -178,9 +178,7 @@ def test_markdown_e2e_full_example(tmp_path: Path) -> None:
 
     src = FIXTURES / "full_example.mid.md"
     out = tmp_path / "full.rendered.md"
-    result = CliRunner().invoke(
-        main, [str(src), "-t", "markdown", "-o", str(out)]
-    )
+    result = CliRunner().invoke(main, [str(src), "-t", "markdown", "-o", str(out)])
     assert result.exit_code == 0, result.output
     content = out.read_text()
     # YAML front matter (YAML 前言)
@@ -210,9 +208,7 @@ def test_markdown_heading_labels_as_anchors(tmp_path: Path) -> None:
     src = tmp_path / "test.mid.md"
     src.write_text("# Introduction\n<!-- label: sec:intro -->\n\nSome text.\n")
     out = tmp_path / "out.rendered.md"
-    CliRunner().invoke(
-        main, [str(src), "-t", "markdown", "-o", str(out)]
-    )
+    CliRunner().invoke(main, [str(src), "-t", "markdown", "-o", str(out)])
     content = out.read_text()
     assert "{#sec:intro}" in content or 'id="sec:intro"' in content
 
@@ -262,11 +258,7 @@ def test_markdown_e2e_table_rendering() -> None:
     带标题的表格渲染为 HTML table 块。
     """
     text = (
-        "| A | B |\n"
-        "|---|---|\n"
-        "| 1 | 2 |\n"
-        "<!-- caption: My Table -->\n"
-        "<!-- label: tab:mytable -->\n"
+        "| A | B |\n|---|---|\n| 1 | 2 |\n<!-- caption: My Table -->\n<!-- label: tab:mytable -->\n"
     )
     content = _convert_markdown(text)
     assert '<figure id="tab:mytable">' in content
@@ -279,13 +271,7 @@ def test_markdown_e2e_front_matter() -> None:
 
     文档元数据渲染为 YAML 前言。
     """
-    text = (
-        "<!-- title: My Paper -->\n"
-        "<!-- author: Alice -->\n"
-        "\n"
-        "# Introduction\n"
-        "\nHello.\n"
-    )
+    text = "<!-- title: My Paper -->\n<!-- author: Alice -->\n\n# Introduction\n\nHello.\n"
     content = _convert_markdown(text)
     assert "---" in content
     assert "title: My Paper" in content

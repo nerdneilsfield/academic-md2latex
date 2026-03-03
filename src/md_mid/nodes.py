@@ -147,14 +147,9 @@ class Table(Node):
             result["metadata"] = self.metadata
         if self.position is not None:
             result["position"] = self.position
-        result["headers"] = [
-            [n.to_dict() for n in cell] for cell in self.headers
-        ]
+        result["headers"] = [[n.to_dict() for n in cell] for cell in self.headers]
         result["alignments"] = self.alignments
-        result["rows"] = [
-            [[n.to_dict() for n in cell] for cell in row]
-            for row in self.rows
-        ]
+        result["rows"] = [[[n.to_dict() for n in cell] for cell in row] for row in self.rows]
         return result
 
 

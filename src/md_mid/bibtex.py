@@ -92,9 +92,7 @@ def _extract_fields(fields_text: str) -> dict[str, str]:
     for m in _FIELD_RE.finditer(fields_text):
         field_name = m.group(1).lower()
         # 取第一个非 None 的捕获组 (First non-None capture group)
-        value = (
-            m.group(2) or m.group(3) or m.group(4) or ""
-        ).strip()
+        value = (m.group(2) or m.group(3) or m.group(4) or "").strip()
         fields[field_name] = value
     return fields
 
@@ -115,9 +113,7 @@ def _format_entry(fields: dict[str, str]) -> str:
             last_name = first_author.split(",")[0].strip()
         else:
             name_parts = first_author.split()
-            last_name = (
-                name_parts[-1] if name_parts else first_author
-            )
+            last_name = name_parts[-1] if name_parts else first_author
         n_authors = len(author.split(" and "))
         suffix = " et al." if n_authors > 1 else ""
         parts.append(f"{last_name}{suffix}")
@@ -127,9 +123,7 @@ def _format_entry(fields: dict[str, str]) -> str:
         parts.append(f'"{title}"')
 
     # 期刊/会议 (Journal or booktitle)
-    venue = (
-        fields.get("journal") or fields.get("booktitle") or ""
-    )
+    venue = fields.get("journal") or fields.get("booktitle") or ""
     if venue:
         parts.append(venue)
 
