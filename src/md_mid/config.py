@@ -10,12 +10,20 @@ with only the keys it explicitly sets. Layers merge via dict.update().
 
 from __future__ import annotations
 
+import logging
 from dataclasses import (
     dataclass,
     field,
     fields,
 )
+from pathlib import Path
 from typing import cast
+
+from ruamel.yaml import YAML
+
+# Module-level YAML parser and logger (模块级 YAML 解析器与日志)
+_yaml = YAML(typ="safe")
+_log = logging.getLogger(__name__)
 
 # Default config values matching PRD §10.2 (PRD §10.2 默认值)
 _DEFAULTS: dict[str, object] = {
@@ -163,3 +171,64 @@ def resolve_config(
         merged.update(_normalize_keys(cli_overrides))
 
     return MdMidConfig.from_dict(merged)
+
+
+def load_config_file(path: Path) -> dict[str, object]:
+    """Load config from YAML file, return flat dict (从 YAML 文件加载配置，返回扁平字典).
+
+    Supports the nested structure from PRD §10.2:
+    ```yaml
+    default-target: latex
+    latex:
+      mode: full
+      code-style: lstlisting
+    markdown:
+      locale: zh
+    ```
+
+    Nested sections ('latex', 'markdown') are flattened into a single dict.
+    The special top-level key 'default-target' maps to 'target'.
+
+    Note: When 'latex' and 'markdown' sections share a key name, later section wins.
+    This is unlikely in practice since latex/markdown options are disjoint by design.
+    (注意：latex 和 markdown 段的同名键后者覆盖前者，实际不太可能因为选项不重叠。)
+
+    Returns an empty dict if:
+    - File does not exist (文件不存在)
+    - YAML parse fails (YAML 解析失败)
+    - YAML root is not a dict (根节点非字典)
+
+    Args:
+        path: Path to config file (配置文件路径)
+
+    Returns:
+        Flat dict with only explicitly-set keys (仅含显式设置键的扁平字典)
+    """
+    if not path.exists():
+        return {}
+
+    try:
+        with open(path) as f:
+            data = _yaml.load(f)
+    except Exception:
+        _log.warning("Failed to parse config file: %s", path)
+        return {}
+
+    if not isinstance(data, dict):
+        return {}
+
+    # Flatten nested sections into single dict (展平嵌套段为单层字典)
+    flat: dict[str, object] = {}
+
+    for key, val in data.items():
+        if key == "default-target":
+            # Special top-level key (特殊顶层键映射)
+            flat["target"] = val
+        elif isinstance(val, dict):
+            # Nested section like "latex:" or "markdown:" (嵌套段)
+            for sub_key, sub_val in val.items():
+                flat[sub_key] = sub_val
+        else:
+            flat[key] = val
+
+    return flat

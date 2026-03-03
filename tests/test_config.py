@@ -1,4 +1,6 @@
-from md_mid.config import MdMidConfig, resolve_config
+from pathlib import Path
+
+from md_mid.config import MdMidConfig, load_config_file, resolve_config
 
 
 def test_config_defaults() -> None:
@@ -91,3 +93,43 @@ def test_config_from_dict_list_value_is_copied() -> None:
     cfg = MdMidConfig.from_dict({"classoptions": source})
     source.append("draft")
     assert "draft" not in cfg.classoptions
+
+
+def test_load_config_file(tmp_path: Path) -> None:
+    """Load external config file (加载外部配置文件)."""
+    cfg_file = tmp_path / "md-mid.yaml"
+    cfg_file.write_text(
+        "latex:\n"
+        "  mode: body\n"
+        "  code-style: minted\n"
+        "  bibstyle: IEEEtran\n"
+        "markdown:\n"
+        "  locale: en\n"
+    )
+    d = load_config_file(cfg_file)
+    assert d["mode"] == "body"
+    assert d["code-style"] == "minted"
+    assert d["bibstyle"] == "IEEEtran"
+    assert d["locale"] == "en"
+
+
+def test_load_config_file_not_found() -> None:
+    """Missing config file returns empty dict (不存在的配置文件返回空字典)."""
+    d = load_config_file(Path("/nonexistent/md-mid.yaml"))
+    assert d == {}
+
+
+def test_load_config_file_flat_keys(tmp_path: Path) -> None:
+    """Flat key config (扁平键配置)."""
+    cfg_file = tmp_path / "md-mid.yaml"
+    cfg_file.write_text("default-target: markdown\n")
+    d = load_config_file(cfg_file)
+    assert d["target"] == "markdown"
+
+
+def test_load_config_file_invalid_yaml(tmp_path: Path) -> None:
+    """Invalid YAML returns empty dict with no crash (无效 YAML 不崩溃)."""
+    cfg_file = tmp_path / "md-mid.yaml"
+    cfg_file.write_text(": invalid: yaml: {{{\n")
+    d = load_config_file(cfg_file)
+    assert d == {}
