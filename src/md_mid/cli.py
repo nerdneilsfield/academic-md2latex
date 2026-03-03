@@ -154,8 +154,8 @@ def main(
         renderer = LaTeXRenderer(
             mode=cfg.mode,
             ref_tilde=cfg.ref_tilde,
-            # code_style and thematic_break will be added in Tasks 5/6
-            # (code_style 和 thematic_break 在任务 5/6 中添加)
+            code_style=cfg.code_style,
+            thematic_break=cfg.thematic_break,
             diag=diag,
         )
         result = renderer.render(east)

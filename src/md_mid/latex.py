@@ -49,6 +49,8 @@ class LaTeXRenderer:
         self,
         mode: str = "full",
         ref_tilde: bool = True,
+        code_style: str = "lstlisting",
+        thematic_break: str = "newpage",
         diag: DiagCollector | None = None,
     ) -> None:
         """初始化 LaTeX 渲染器（Initialize LaTeX renderer）.
@@ -56,10 +58,14 @@ class LaTeXRenderer:
         Args:
             mode: Output mode: full/body/fragment (输出模式)
             ref_tilde: Whether to use tilde before \\ref (是否在 \\ref 前加波浪号)
+            code_style: Code block style: lstlisting | minted (代码块样式)
+            thematic_break: Thematic break style: newpage | hrule | ignore (分隔线样式)
             diag: Optional diagnostic collector (可选诊断收集器)
         """
         self.mode = mode
         self.ref_tilde = ref_tilde
+        self.code_style = code_style
+        self.thematic_break_style = thematic_break
         self.diag = diag
 
     def render(self, node: Node) -> str:
@@ -184,7 +190,18 @@ class LaTeXRenderer:
         return f"\\[\n{mb.content}\n\\]\n"
 
     def render_code_block(self, node: Node) -> str:
+        """渲染代码块 (Render code block: lstlisting or minted)."""
         cb = cast(CodeBlock, node)
+        if self.code_style == "minted":
+            if cb.language:
+                return (
+                    f"\\begin{{minted}}{{{cb.language}}}\n"
+                    f"{cb.content}\n"
+                    f"\\end{{minted}}\n"
+                )
+            # No language: fall back to verbatim (无语言：回退到 verbatim)
+            return f"\\begin{{verbatim}}\n{cb.content}\n\\end{{verbatim}}\n"
+        # Default: lstlisting (默认：lstlisting)
         if cb.language:
             return (
                 f"\\begin{{lstlisting}}[language={cb.language}]\n"

@@ -159,6 +159,26 @@ class TestBlock:
         result = render(ThematicBreak())
         assert "\\newpage" in result
 
+    def test_code_block_minted(self):
+        """minted code block rendering (minted 代码块渲染)."""
+        c = CodeBlock(content="x = 1", language="python")
+        result = render(c, code_style="minted")
+        assert "\\begin{minted}{python}" in result
+        assert "x = 1" in result
+        assert "\\end{minted}" in result
+
+    def test_code_block_minted_no_lang(self):
+        """minted code block without language falls back to verbatim (minted 无语言回退)."""
+        c = CodeBlock(content="hello", language="")
+        result = render(c, code_style="minted")
+        assert "\\begin{verbatim}" in result
+
+    def test_code_block_lstlisting_default(self):
+        """Default lstlisting code block unchanged (默认 lstlisting 不变)."""
+        c = CodeBlock(content="x = 1", language="python")
+        result = render(c)
+        assert "\\begin{lstlisting}" in result
+
 
 # ── Citation / CrossRef (Task 11) ─────────────────────────────
 
