@@ -253,6 +253,11 @@ class LaTeXRenderer:
         return result
 
     def render_thematic_break(self, node: Node) -> str:
+        """渲染分隔线 (Render thematic break: newpage | hrule | ignore)."""
+        if self.thematic_break == "hrule":
+            return "\\hrule\n"
+        if self.thematic_break == "ignore":
+            return ""
         return "\\newpage\n"
 
     def render_figure(self, node: Node) -> str:

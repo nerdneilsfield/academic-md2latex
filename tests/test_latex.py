@@ -159,6 +159,17 @@ class TestBlock:
         result = render(ThematicBreak())
         assert "\\newpage" in result
 
+    def test_thematic_break_hrule(self):
+        """hrule thematic break (hrule 分隔线)."""
+        result = render(ThematicBreak(), thematic_break="hrule")
+        assert "\\hrule" in result
+        assert "\\newpage" not in result
+
+    def test_thematic_break_ignore(self):
+        """ignore thematic break produces empty (ignore 分隔线为空)."""
+        result = render(ThematicBreak(), thematic_break="ignore")
+        assert result.strip() == ""
+
     def test_code_block_minted(self):
         """minted code block rendering (minted 代码块渲染)."""
         c = CodeBlock(content="x = 1", language="python")
