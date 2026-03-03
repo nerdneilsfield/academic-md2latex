@@ -203,6 +203,9 @@ class LaTeXRenderer:
 
     def render_raw_block(self, node: Node) -> str:
         rb = cast(RawBlock, node)
+        if rb.kind == "html":
+            # HTML passthrough has no LaTeX equivalent — skip (HTML 块无 LaTeX 等价，跳过)
+            return ""
         return f"{rb.content}\n"
 
     def render_environment(self, node: Node) -> str:
