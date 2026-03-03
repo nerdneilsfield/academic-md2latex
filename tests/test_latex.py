@@ -405,3 +405,22 @@ class TestDiagnostics:
         renderer = LaTeXRenderer(diag=dc)
         renderer.render(Paragraph(children=[Text(content="hello")]))
         assert not any("Unhandled" in d.message for d in dc.warnings)
+
+
+# ── Fix C: HTML-kind RawBlock skipped in LaTeX renderer ───────────────────────
+
+
+class TestHtmlRawBlockSkipped:
+    """HTML-kind RawBlock produces no LaTeX output (HTML 块无 LaTeX 输出测试)."""
+
+    def test_html_raw_block_skipped_in_latex(self) -> None:
+        """Fix C: HTML-kind RawBlock 在 LaTeX 渲染器中被跳过 (HTML block skipped in LaTeX)."""
+        rb = RawBlock(content="<div>hello</div>", kind="html")
+        result = LaTeXRenderer().render(rb)
+        assert result == ""
+
+    def test_latex_raw_block_still_emitted(self) -> None:
+        """Fix C: LaTeX-kind RawBlock 仍正常输出 (LaTeX block still emits content)."""
+        rb = RawBlock(content="\\newcommand{\\myvec}{\\mathbf}", kind="latex")
+        result = LaTeXRenderer().render(rb)
+        assert "\\newcommand" in result

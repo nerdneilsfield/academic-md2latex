@@ -12,6 +12,7 @@ from md_mid.nodes import (
     MathBlock,
     MathInline,
     Paragraph,
+    RawBlock,
     Strong,
     Table,
     Text,
@@ -229,3 +230,24 @@ def test_empty_cell_table() -> None:
     table = [c for c in doc.children if isinstance(c, Table)][0]
     assert len(table.headers) == 2
     assert len(table.rows[0]) == 2
+
+
+# ── Fix C: html_block and html_inline produce RawBlock with kind="html" ────────
+
+
+def test_html_block_creates_rawblock_html_kind() -> None:
+    """html_block 生成 kind=html 的 RawBlock (html_block creates RawBlock with kind=html)."""
+    doc = parse("<div>hello</div>\n\n")
+    raw_blocks = [c for c in doc.children if isinstance(c, RawBlock)]
+    assert len(raw_blocks) >= 1
+    assert all(rb.kind == "html" for rb in raw_blocks)
+
+
+def test_html_inline_creates_rawblock_html_kind() -> None:
+    """html_inline 生成 kind=html 的 RawBlock (html_inline creates RawBlock with kind=html)."""
+    doc = parse("Text with <span>inline</span> html\n")
+    # html_inline nodes appear inside paragraph children
+    para = doc.children[0]
+    raw_blocks = [c for c in para.children if isinstance(c, RawBlock)]
+    assert len(raw_blocks) >= 1
+    assert all(rb.kind == "html" for rb in raw_blocks)

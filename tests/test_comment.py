@@ -207,3 +207,20 @@ def test_image_in_paragraph_is_penetrated() -> None:
         img = para.children[0]
         assert isinstance(img, Image)
         assert img.metadata.get("caption") == "My Fig"
+
+
+# ── Fix D: Misplaced directive removed from AST ────────────────────────────────
+
+
+def test_misplaced_directive_removed_from_ast() -> None:
+    """Fix D: 正文中错位的指令节点被从 AST 中删除 (Misplaced directive node removed from AST)."""
+    # A paragraph followed by a misplaced document-level directive (段落后跟错位的文档指令)
+    text = "Some content.\n\n<!-- title: Late -->\n"
+    raw = parse(text)
+    node_count_before = len(raw.children)
+    dc = DiagCollector("test.md")
+    east = process_comments(raw, "test.md", diag=dc)
+    # The directive warning should fire (指令警告应触发)
+    assert any("after content" in d.message for d in dc.warnings)
+    # The misplaced node must be removed — AST shrinks by at least 1 (AST 节点数减少至少 1)
+    assert len(east.children) < node_count_before

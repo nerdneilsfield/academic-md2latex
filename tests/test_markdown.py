@@ -557,6 +557,20 @@ class TestTableRichCells:
         assert "&lt;script&gt;" in result
         assert "<script>" not in result
 
+    def test_cell_math_xss_escaped(self) -> None:
+        """Fix A: 单元格数学公式 XSS 被转义 (Math XSS in cell is HTML-escaped)."""
+        # Attacker-controlled math content with an HTML script tag (含 script 标签的数学内容)
+        t = Table(
+            headers=_cells("H"),
+            alignments=["left"],
+            rows=[[[MathInline(content="x<script>alert(1)</script>y")]]],
+        )
+        t.metadata["caption"] = "T"
+        result = render(doc(t))
+        # The raw <script> must NOT appear; it must be HTML-escaped (原始 <script> 不可出现)
+        assert "<script>" not in result
+        assert "&lt;script&gt;" in result
+
 
 # ── Phase 3 Task 5: Locale labels (标签本地化) ─────────────────────
 
@@ -730,6 +744,21 @@ class TestFrontMatter:
         assert "title: Simple" in result
         assert "abstract: |" not in result
 
+    def test_front_matter_url_value_quoted(self) -> None:
+        """Fix B: URL 值含冒号时被引号包裹 (URL value with colon is quoted)."""
+        d = doc()
+        d.metadata["title"] = "https://example.com"
+        result = render(d)
+        assert 'title: "https://example.com"' in result
+
+    def test_front_matter_plain_value_unquoted(self) -> None:
+        """Fix B: 无特殊字符的值不被引号包裹 (Plain value emitted without quotes)."""
+        d = doc()
+        d.metadata["title"] = "Plain Title"
+        result = render(d)
+        assert "title: Plain Title" in result
+        assert 'title: "Plain Title"' not in result
+
 
 # ── Task 2 (H3): HTML Escaping (HTML 转义) ───────────────────────
 
@@ -787,3 +816,71 @@ class TestUnhandledNodeWarning:
         assert len(dc.warnings) == 1
         assert dc.warnings[0].position is not None
         assert dc.warnings[0].position.line == 42
+
+
+# ── Fix C: HTML passthrough tests ─────────────────────────────────────────────
+
+
+class TestHtmlPassthrough:
+    """HTML block and inline passthrough in Markdown renderer (HTML 原样透传测试)."""
+
+    def test_html_block_passthrough(self) -> None:
+        """Fix C: HTML block 透传为原始内容 (HTML block passes through as-is)."""
+        from md_mid.nodes import RawBlock
+        rb = RawBlock(content="<div>hello</div>", kind="html")
+        result = render(doc(rb))
+        assert "<div>hello</div>" in result
+        assert "<details>" not in result
+
+    def test_html_inline_passthrough(self) -> None:
+        """Fix C: HTML inline 透传为原始内容 (HTML inline passes through as-is)."""
+        from md_mid.nodes import RawBlock
+        rb = RawBlock(content="<span>hi</span>", kind="html")
+        result = render(doc(rb))
+        assert "<span>hi</span>" in result
+        assert "<details>" not in result
+
+    def test_latex_raw_block_details_fold(self) -> None:
+        """Fix C: LaTeX 块仍被折叠 (LaTeX raw block wrapped in details fold)."""
+        from md_mid.nodes import RawBlock
+        rb = RawBlock(content="\\newcommand{\\myvec}{\\mathbf}", kind="latex")
+        result = render(doc(rb))
+        assert "<details>" in result
+        assert "Raw LaTeX" in result
+        assert "\\newcommand" in result
+
+
+# ── Fix E: Native footnote definition rendering ───────────────────────────────
+
+
+class TestNativeFootnoteDef:
+    """Native Markdown footnote definition rendering (原生脚注定义渲染测试)."""
+
+    def test_native_footnote_def_rendered(self) -> None:
+        """Fix E: 原生脚注定义出现在输出末尾 (Native footnote def appears at end of output)."""
+        from md_mid.parser import parse as md_parse
+        # Note: markdown-it-py footnote plugin uses 0-indexed internal IDs (脚注插件使用 0 起始 ID)
+        src = "See[^note] this.\n\n[^note]: My note text\n"
+        d = md_parse(src)
+        result = MarkdownRenderer(mode="body").render(d)
+        # Content must appear as a footnote definition (内容应以脚注定义形式出现)
+        assert "]: My note text" in result
+
+    def test_native_footnote_def_and_citation_both_rendered(self) -> None:
+        """Fix E: 原生脚注和引用脚注都出现在输出中 (Both native and citation footnotes appear)."""
+        from md_mid.nodes import FootnoteDef
+        # Build AST directly with a Citation and a native FootnoteDef (直接构建含引用和脚注的 AST)
+        bib = {"smith2024": "Smith, 2024"}
+        fn_def = FootnoteDef(
+            def_id="myref",
+            children=[Paragraph(children=[Text(content="My note")])],
+        )
+        p = Paragraph(children=[
+            Text(content="See "),
+            Citation(keys=["smith2024"]),
+        ])
+        d = Document(children=[p, fn_def])
+        result = MarkdownRenderer(bib=bib, mode="body").render(d)
+        # Both native footnote def and citation footnote should appear (两者均应出现)
+        assert "]: My note" in result
+        assert "[^smith2024]: Smith, 2024" in result

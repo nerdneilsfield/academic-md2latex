@@ -6,6 +6,7 @@ from md_mid.nodes import (
     Figure,
     Heading,
     MathBlock,
+    RawBlock,
     Strong,
     Table,
     Text,
@@ -95,3 +96,20 @@ def test_table_to_dict_serializes_cell_nodes() -> None:
     assert d["headers"][0][0]["type"] == "text"
     assert d["headers"][0][0]["content"] == "H"
     assert d["rows"][0][0][0]["type"] == "text"
+
+
+# ── Fix C: RawBlock kind field ─────────────────────────────────────────────────
+
+
+def test_raw_block_default_kind_is_latex() -> None:
+    """RawBlock 默认 kind 为 latex (RawBlock default kind is latex)."""
+    rb = RawBlock(content="\\begin{equation}x\\end{equation}")
+    assert rb.kind == "latex"
+    assert rb.type == "raw_block"
+
+
+def test_raw_block_html_kind() -> None:
+    """RawBlock 可设置 kind 为 html (RawBlock accepts html kind)."""
+    rb = RawBlock(content="<span>hi</span>", kind="html")
+    assert rb.kind == "html"
+    assert rb.content == "<span>hi</span>"
