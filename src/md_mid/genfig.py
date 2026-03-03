@@ -8,6 +8,7 @@ the nanobanana-compatible runner to generate them.
 from __future__ import annotations
 
 import importlib.util
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -34,19 +35,18 @@ class FigureJob:
     params: dict[str, Any] | None
 
 
-def _walk(node: Node) -> list[Node]:
-    """Recursively collect all descendant nodes (递归获取所有后代节点).
+def _walk(node: Node) -> Iterator[Node]:
+    """Recursively yield all descendant nodes (递归生成所有后代节点).
 
     Args:
         node: Root node (根节点)
 
-    Returns:
-        Flat list of all descendant nodes (所有后代节点的列表)
+    Yields:
+        All descendant nodes depth-first (深度优先生成所有后代节点)
     """
-    result: list[Node] = [node]
+    yield node
     for child in node.children:
-        result.extend(_walk(child))
-    return result
+        yield from _walk(child)
 
 
 def collect_jobs(
@@ -67,6 +67,7 @@ def collect_jobs(
         List of FigureJob instances needing generation (需要生成的 FigureJob 列表)
     """
     jobs: list[FigureJob] = []
+    resolved_base = base_dir.resolve()
     for node in _walk(doc):
         if not isinstance(node, (Figure, Image)):
             continue
@@ -84,20 +85,22 @@ def collect_jobs(
 
         # Path traversal safety: output must stay within base_dir (路径安全：输出必须在基目录内)
         try:
-            output_path.relative_to(base_dir.resolve())
+            output_path.relative_to(resolved_base)
         except ValueError:
             continue  # path escapes base_dir, skip (路径越界，跳过)
 
         if not force and output_path.exists():
             continue  # image already present, skip (图片已存在，跳过)
 
-        jobs.append(FigureJob(
-            src=src,
-            output_path=output_path,
-            prompt=prompt,
-            model=ai.get("model") if isinstance(ai.get("model"), str) else None,
-            params=ai.get("params") if isinstance(ai.get("params"), dict) else None,
-        ))
+        jobs.append(
+            FigureJob(
+                src=src,
+                output_path=output_path,
+                prompt=prompt,
+                model=ai.get("model") if isinstance(ai.get("model"), str) else None,
+                params=ai.get("params") if isinstance(ai.get("params"), dict) else None,
+            )
+        )
     return jobs
 
 
@@ -105,6 +108,11 @@ def _load_runner(runner_path: Path) -> Any:
     """Dynamically load the nanobanana-compatible runner module.
 
     动态加载 nanobanana 兼容的 runner 模块。
+
+    SECURITY WARNING / 安全警告:
+        This function executes arbitrary Python code from the specified file.
+        Only use runner scripts from trusted sources.
+        此函数执行指定文件中的任意 Python 代码，仅使用受信任的 runner 脚本。
 
     Args:
         runner_path: Path to the runner Python script (runner 脚本路径)
@@ -153,7 +161,10 @@ def generate_figure_job(
     if job.params and "size" in job.params:
         kwargs["size"] = str(job.params["size"])
 
-    returncode: int = runner.generate_image(**kwargs)
+    try:
+        returncode: int = runner.generate_image(**kwargs)
+    except Exception:
+        return False
 
     if returncode != 0:
         return False
