@@ -1,9 +1,10 @@
 """Comment Processor：解析 EAST 中的 HTML 注释节点，执行指令收集、附着和环境构建。
 
-三阶段处理：
-1. 收集文档级指令（头部区域）
-2. 处理 begin/end 对（环境 + raw）
-3. 向上附着指令（label/caption/width 等 → 前一个兄弟节点）
+四阶段处理（Four-phase processing）：
+1. 收集文档级指令（头部区域）Collect document-level directives from header region
+2. 处理 begin/end 对（环境 + raw）Process begin/end pairs into Environment/RawBlock
+2.5. 处理 include-tex 指令（引入外部 TeX 文件）Process include-tex directives
+3. 向上附着指令（label/caption/width 等 → 前一个兄弟节点）Attach-up directives
 """
 
 from __future__ import annotations
