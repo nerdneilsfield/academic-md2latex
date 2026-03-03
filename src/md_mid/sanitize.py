@@ -9,16 +9,10 @@ while preserving safe academic HTML structures.
 
 from __future__ import annotations
 
-import re
 from html import escape
 from html.parser import HTMLParser
 
-# Strip ASCII control characters from URLs before scheme check
-# (URL 中 ASCII 控制字符清除)
-_CTRL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
-
-# Dangerous URI schemes for href/src attributes (危险 URI scheme 黑名单)
-_UNSAFE_URL_SCHEMES = ("javascript:", "vbscript:", "data:text/html")
+from md_mid.url_check import is_unsafe_url
 
 # Safe HTML tags — normal and self-closing (安全 HTML 标签白名单)
 _SAFE_TAGS: frozenset[str] = frozenset({
@@ -67,8 +61,7 @@ def _is_safe_url(url: str) -> bool:
     Returns:
         True if URL is safe (URL 安全则返回 True)
     """
-    cleaned = _CTRL_CHARS_RE.sub("", url).strip().lower()
-    return not cleaned.startswith(_UNSAFE_URL_SCHEMES)
+    return not is_unsafe_url(url)
 
 
 class _Sanitizer(HTMLParser):
