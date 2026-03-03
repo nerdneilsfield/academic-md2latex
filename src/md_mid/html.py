@@ -6,6 +6,7 @@ HTML 渲染器 — 将 EAST 转换为自包含的学术 HTML。
 from __future__ import annotations
 
 import html as _html_lib
+import re
 from typing import cast
 
 from md_mid.nodes import (
@@ -30,7 +31,7 @@ from md_mid.nodes import (
     Text,
 )
 
-# Safe URL schemes for links (链接安全 scheme 白名单)
+# Dangerous URI schemes to block (危险 URI scheme 黑名单)
 _UNSAFE_SCHEMES = ("javascript:", "vbscript:", "data:text/html")
 
 
@@ -38,6 +39,12 @@ def _esc(text: str) -> str:
     """HTML-escape text (HTML 转义文本)."""
     return _html_lib.escape(text, quote=True)
 
+
+# Safe width pattern: digits + CSS units only (安全宽度正则：仅数字 + CSS 单位)
+_SAFE_WIDTH_RE = re.compile(r"^\d+(\.\d+)?(px|em|rem|%|cm|mm|pt|vw)$")
+
+# Strip ASCII control characters from URLs before scheme check (URL 中 ASCII 控制字符清除)
+_CTRL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
 
 # MathJax v3 CDN (MathJax v3 CDN 链接)
 _MATHJAX_CDN = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
@@ -101,6 +108,10 @@ class HTMLRenderer:
         # Native footnote defs (原生脚注定义)
         self._fn_defs: dict[str, str] = {}
 
+        # Footnote ref sequential numbering (脚注引用序号)
+        self._fn_ref_order: dict[str, int] = {}
+        self._fn_ref_seq: int = 0
+
     # ── Public API ────────────────────────────────────────────────────────────
 
     def render(self, node: Node) -> str:
@@ -119,6 +130,8 @@ class HTMLRenderer:
         self._cite_order = {}
         self._cite_seq = 0
         self._fn_defs = {}
+        self._fn_ref_order = {}
+        self._fn_ref_seq = 0
 
         body = "".join(self._dispatch(child) for child in doc.children)
         footnotes = self._render_footnotes()
@@ -252,8 +265,8 @@ class HTMLRenderer:
         id_attr = f' id="{_esc(label)}"' if label else ""
 
         # Build img tag (构建 img 标签)
-        style = f' style="max-width:{width}"' if width and not width.endswith("textwidth") else ""
-        img_tag = f'<img src="{_esc(fig.src)}" alt="{_esc(fig.alt)}"{style}>'
+        style = f' style="max-width:{_esc(width)}"' if width and _SAFE_WIDTH_RE.match(width) else ""
+        img_tag = f'<img src="{_esc(fig.src)}" alt="{_esc(fig.alt)}"{style} loading="lazy">'
 
         lines = [f"<figure{id_attr}>", f"  {img_tag}"]
 
@@ -284,7 +297,7 @@ class HTMLRenderer:
                 metadata=dict(meta),
             )
             return self._render_figure(fig_node)
-        return f'<img src="{_esc(img.src)}" alt="{_esc(img.alt)}">'
+        return f'<img src="{_esc(img.src)}" alt="{_esc(img.alt)}" loading="lazy">'
 
     def _render_table(self, node: Node) -> str:
         """Table → table tag with auto-numbering and caption (表渲染，自动编号)."""
@@ -347,11 +360,13 @@ class HTMLRenderer:
         return f'<div class="env-{_esc(env.name)}">\n{content}</div>\n'
 
     def _render_raw_block(self, node: Node) -> str:
-        """Raw block: HTML kind → passthrough; LaTeX → details fold (原始块渲染)."""
+        """Raw block: HTML kind → sanitized; LaTeX → details fold (原始块渲染)."""
         rb = cast(RawBlock, node)
         if rb.kind == "html":
-            # HTML passthrough (HTML 原样透传)
-            return rb.content + "\n"
+            # Sanitize HTML through allowlist (通过白名单清洗 HTML)
+            from md_mid.sanitize import sanitize_html
+
+            return sanitize_html(rb.content) + "\n"
         # LaTeX raw block → collapsible fold (LaTeX 块折叠显示)
         escaped = _esc(rb.content)
         return (
@@ -395,8 +410,9 @@ class HTMLRenderer:
         lnk = cast(Link, node)
         text = self._render_children(node)
         url = lnk.url
-        # Block dangerous URI schemes (阻止危险的 URI scheme)
-        if url.lower().startswith(_UNSAFE_SCHEMES):
+        # Block dangerous schemes; strip control chars first (阻止危险 scheme，先清除控制字符)
+        cleaned = _CTRL_CHARS_RE.sub("", url).strip().lower()
+        if cleaned.startswith(_UNSAFE_SCHEMES):
             return text  # render text only, drop the link (仅渲染文本，丢弃链接)
         return f'<a href="{_esc(url)}">{text}</a>'
 
@@ -420,9 +436,13 @@ class HTMLRenderer:
         return "".join(parts)
 
     def _render_footnote_ref(self, node: Node) -> str:
-        """Footnote ref → superscript link (脚注引用渲染)."""
+        """Footnote ref → superscript sequential number (脚注引用渲染为上标序号)."""
         fr = cast(FootnoteRef, node)
-        return f'<sup><a href="#fn-{_esc(fr.ref_id)}">[fn]</a></sup>'
+        if fr.ref_id not in self._fn_ref_order:
+            self._fn_ref_seq += 1
+            self._fn_ref_order[fr.ref_id] = self._fn_ref_seq
+        n = self._fn_ref_order[fr.ref_id]
+        return f'<sup><a href="#fn-{_esc(fr.ref_id)}">[{n}]</a></sup>'
 
     def _render_footnote_def(self, node: Node) -> str:
         """Footnote def → collect for end of document (脚注定义收集)."""
@@ -456,10 +476,14 @@ class HTMLRenderer:
                 parts.append(f'  <li id="cite-{_esc(key)}">{text}</li>\n')
             parts.append("</ol>\n</div>\n")
 
-        # Footnotes (脚注部分)
+        # Footnotes — sorted by ref encounter order (脚注部分 — 按引用出现顺序排序)
         if self._fn_defs:
             parts.append('<div class="footnotes">\n<hr>\n<ol>\n')
-            for def_id, content in self._fn_defs.items():
+            ordered = sorted(
+                self._fn_defs.items(),
+                key=lambda kv: self._fn_ref_order.get(kv[0], 999),
+            )
+            for def_id, content in ordered:
                 parts.append(f'  <li id="fn-{_esc(def_id)}">{content}</li>\n')
             parts.append("</ol>\n</div>\n")
 
