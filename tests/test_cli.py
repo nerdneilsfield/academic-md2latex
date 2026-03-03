@@ -262,6 +262,22 @@ def test_cli_config_option_thematic_break(tmp_path: Path) -> None:
         main, [str(src), "-o", str(out), "--config", str(cfg)]
     )
     assert result.exit_code == 0
+    content = out.read_text()
+    assert "\\hrule" in content
+
+
+def test_cli_latex_locale_english(tmp_path: Path) -> None:
+    """--locale en injects LaTeX caption overrides (--locale en 注入 LaTeX 图表名覆盖)."""
+    src = tmp_path / "t.mid.md"
+    src.write_text("# Hello\n\nWorld.\n")
+    out = tmp_path / "out.tex"
+    result = CliRunner().invoke(
+        main, [str(src), "-t", "latex", "--locale", "en", "-o", str(out)]
+    )
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert "\\renewcommand{\\figurename}{Figure}" in content
+    assert "\\renewcommand{\\tablename}{Table}" in content
 
 
 def test_cli_bibliography_mode_none(tmp_path: Path) -> None:

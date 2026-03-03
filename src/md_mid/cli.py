@@ -156,6 +156,7 @@ def main(
             ref_tilde=cfg.ref_tilde,
             code_style=cfg.code_style,
             thematic_break=cfg.thematic_break,
+            locale=cfg.locale,
             diag=diag,
         )
         result = renderer.render(east)
