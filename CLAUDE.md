@@ -185,19 +185,40 @@ def test_calculate_average_empty_list() -> None:
 
 ## Build & Test
 
+**必须使用 uv 管理项目和运行测试 (MUST use uv for project management and testing)**
+
 ```bash
-# Build
-npm run build
+# Install dependencies
+uv sync
 
-# Test
-npm test
+# Run all tests
+make test
 
-# Lint
-npm run lint
+# Or run tests directly with uv
+uv run pytest -v --tb=short
+
+# Run all checks (lint + typecheck + test)
+make check
+
+# Individual checks
+make lint       # ruff check
+make format     # ruff format
+make typecheck  # mypy
 ```
 
-- ALWAYS run tests after making code changes
-- ALWAYS verify build succeeds before committing
+**必须使用 Makefile 跑全测试 (MUST use Makefile for full test suite)**
+
+| Command | Description |
+|---------|-------------|
+| `make test` | Run pytest with uv |
+| `make check` | Run lint + typecheck + test |
+| `make lint` | Run ruff linter |
+| `make format` | Run ruff formatter |
+| `make typecheck` | Run mypy type checker |
+| `make fix` | Auto-fix lint issues and format |
+
+- ALWAYS run `make test` after making code changes
+- ALWAYS run `make check` before committing
 
 ## Security Rules
 

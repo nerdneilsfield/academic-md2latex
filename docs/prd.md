@@ -166,6 +166,8 @@ tokens = md.parse(text)
 
 ### 3.1 LaTeX 输出
 
+`--mode` 参数控制 LaTeX 输出的范围：
+
 #### 3.1.1 Full Document 模式（默认，standalone）
 
 生成完整的 `.tex` 文件，包含 preamble 和 document 环境：
@@ -229,6 +231,12 @@ tokens = md.parse(text)
 ### 3.2 Rich Markdown 输出
 
 将 md-mid 转换为标准 Markdown + 少量 HTML，使其在 GitHub / Obsidian / Typora 等环境下渲染良好。
+
+`--mode` 参数同样控制 Markdown 输出的范围：
+
+- **Full Document 模式 (`full`)**：输出包含 YAML front matter（由文档级指令生成）、正文内容以及集中的脚注（如适用）。
+- **Body-only 模式 (`body`)**：仅输出正文内容和脚注，不生成 YAML front matter。
+- **Fragment 模式 (`fragment`)**：仅输出最小片段内容，不生成 front matter，也不收集和输出脚注定义。
 
 核心转换规则：
 
@@ -1040,16 +1048,19 @@ Arguments:
 
 Output Target:
   -t, --target <target>    输出目标: latex | markdown | html  (默认: latex)
-  -o, --output <path>      输出文件路径（默认: 同名替换扩展名）
+  -o, --output <path>      输出文件路径，支持 "-" 输出到 stdout（默认: 同名替换扩展名）
+
+Output Options:
+  --mode <mode>            输出模式: full | body | fragment  (默认: full)
 
 LaTeX Options:
-  --mode <mode>            输出模式: full | body | fragment  (默认: full)
   --bibliography-mode <m>  bibliography 输出策略: auto | standalone | external | none  (默认: auto)
   --template <path>        LaTeX 模板文件 (.yaml)
 
 Markdown Options:
   --bib <path>             BibTeX 文件路径（用于 Rich MD 脚注生成）
   --heading-id-style <s>   heading 锚点风格: attr ({#id}) | html (<h2 id>)
+  --locale <lang>          图表标签语言: zh | en  (默认: zh)
 
 General:
   --strict                 严格模式，不支持的语法报错
@@ -1205,9 +1216,9 @@ Figure extends Node {
 
 Table extends Node {
   type: "table"
-  headers: string[]
+  headers: Node[][]           # 表头单元格，包含行内节点
   alignments: ("left"|"center"|"right")[]
-  rows: string[][]
+  rows: Node[][][]            # 数据行，包含单元格，单元格包含行内节点
   metadata: {caption?, label?, placement?}
 }
 
