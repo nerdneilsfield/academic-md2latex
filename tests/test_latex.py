@@ -531,7 +531,7 @@ class TestEnvironmentArgs:
 class TestLatexFootnotes:
     """LaTeX two-pass footnote rendering tests (LaTeX 两遍脚注渲染测试)."""
 
-    def test_footnote_expands_inline(self) -> None:
+    def test_footnote_inline_expansion(self) -> None:
         """Footnote expands at reference site (脚注在引用处展开).
 
         FootnoteRef is replaced by \\footnote{content} from the matching FootnoteDef.
@@ -552,7 +552,7 @@ class TestLatexFootnotes:
         # FootnoteDef itself should not appear in output (脚注定义不出现在输出中)
         assert "\\footnotetext" not in result
 
-    def test_footnote_unknown_ref_fallback(self) -> None:
+    def test_footnote_fallback_no_def(self) -> None:
         """Unknown footnote ref falls back gracefully (未知脚注引用回退).
 
         When a FootnoteRef has no matching def, produces \\footnote{[ref_id]}.
@@ -564,8 +564,8 @@ class TestLatexFootnotes:
         ])
         doc = Document(children=[p])
         result = render(doc)
-        # No crash, produces some footnote marker (不崩溃，产出某种脚注标记)
-        assert "\\footnote" in result
+        # No crash, produces the [ref_id] fallback marker (不崩溃，产出 [ref_id] 回退标记)
+        assert "\\footnote{[999]}" in result
 
     def test_footnote_multiple_refs(self) -> None:
         """Multiple footnotes each expand correctly (多个脚注各自正确展开).
@@ -585,3 +585,16 @@ class TestLatexFootnotes:
         result = render(doc)
         assert "\\footnote{Note A}" in result
         assert "\\footnote{Note B}" in result
+
+    def test_footnote_def_produces_no_output(self) -> None:
+        """FootnoteDef node alone produces no LaTeX output (FootnoteDef 节点独立渲染为空字符串).
+
+        Content is already expanded inline at the FootnoteRef site; the def itself
+        must not emit any LaTeX. (内容已在引用处展开，定义节点本身不输出任何内容。)
+        """
+        fn_def = FootnoteDef(
+            def_id="0",
+            children=[Paragraph(children=[Text(content="Unused")])],
+        )
+        result = LaTeXRenderer().render(fn_def)
+        assert result == ""

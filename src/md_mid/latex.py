@@ -105,6 +105,8 @@ class LaTeXRenderer:
     # -- 文档 ----------------------------------------------------------------
 
     def render_document(self, node: Node) -> str:
+        # Reset per-document state to allow renderer reuse (重置每文档状态以支持复用)
+        self._fn_defs.clear()
         # Pre-scan: collect all FootnoteDef nodes (预扫描：收集所有脚注定义)
         self._collect_footnote_defs(node)
         body = self.render_children(node)
