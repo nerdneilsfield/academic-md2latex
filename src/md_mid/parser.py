@@ -323,16 +323,6 @@ def _build_footnote_block(node: SyntaxTreeNode) -> list[Node]:
 # -- 辅助函数 ----------------------------------------------------------------
 
 
-def _extract_text_from_tree(node: SyntaxTreeNode) -> str:
-    """从 SyntaxTreeNode 中提取纯文本。"""
-    if node.content:
-        return node.content
-    parts: list[str] = []
-    for child in node.children:
-        parts.append(_extract_text_from_tree(child))
-    return "".join(parts)
-
-
 def _extract_text_from_nodes(nodes: list[Node]) -> str:
     """从 EAST 节点列表中提取纯文本。"""
     parts: list[str] = []
