@@ -13,6 +13,7 @@ from md_mid.nodes import (
     FootnoteRef,
     HardBreak,
     Heading,
+    Image,
     Link,
     List,
     ListItem,
@@ -459,6 +460,59 @@ class TestHtmlRawBlockSkipped:
         rb = RawBlock(content="\\newcommand{\\myvec}{\\mathbf}", kind="latex")
         result = LaTeXRenderer().render(rb)
         assert "\\newcommand" in result
+
+
+# ── Task 1 (Phase 5): LaTeX AI figure comments ─────────────────────────────
+
+
+class TestLatexAiFigureComments:
+    """AI metadata emits % comments in LaTeX figure output (AI 注释出现在 LaTeX 图环境中)."""
+
+    def test_figure_ai_comments_emitted(self) -> None:
+        """AI metadata → % AI Generated / % Prompt / % Negative / % Params comments."""
+        fig = Figure(
+            src="fig.png",
+            alt="test",
+            metadata={
+                "caption": "Test",
+                "label": "fig:test",
+                "ai": {
+                    "generated": True,
+                    "model": "midjourney-v6",
+                    "prompt": "blue sky",
+                    "negative_prompt": "dark",
+                    "params": {"seed": 42},
+                },
+            },
+        )
+        result = LaTeXRenderer().render(fig)
+        assert "% AI Generated: midjourney-v6" in result
+        assert "% Prompt: blue sky" in result
+        assert "% Negative: dark" in result
+        assert "% Params:" in result
+
+    def test_figure_no_ai_no_comments(self) -> None:
+        """Figure without AI metadata → no % AI comments (无 AI 元数据无注释)."""
+        fig = Figure(
+            src="fig.png",
+            alt="test",
+            metadata={"caption": "Test", "label": "fig:test"},
+        )
+        result = LaTeXRenderer().render(fig)
+        assert "% AI" not in result
+
+    def test_image_promoted_ai_comments_emitted(self) -> None:
+        """Image promoted to figure also emits AI comments (升级图片也输出 AI 注释)."""
+        img = Image(
+            src="img.png",
+            alt="test",
+            metadata={
+                "caption": "Caption",
+                "ai": {"generated": True, "model": "dalle-3"},
+            },
+        )
+        result = LaTeXRenderer().render(img)
+        assert "% AI Generated: dalle-3" in result
 
 
 # ── Task 8: Environment args as YAML sequence ─────────────────────────────────

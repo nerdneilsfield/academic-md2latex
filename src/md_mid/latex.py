@@ -304,6 +304,43 @@ class LaTeXRenderer:
             return ""
         return "\\newpage\n"
 
+    @staticmethod
+    def _sanitize_comment(text: str) -> str:
+        """Strip newlines to prevent LaTeX comment injection (去除换行防注入)."""
+        return str(text).replace("\n", " ").replace("\r", "")
+
+    def _render_ai_comments(self, ai: object) -> list[str]:
+        """Emit % AI ... comments from ai metadata dict (输出 AI 元数据 LaTeX 注释).
+
+        Args:
+            ai: ai sub-dict from node.metadata (节点 metadata 的 ai 子字典)
+
+        Returns:
+            List of LaTeX comment lines (LaTeX 注释行列表)
+        """
+        if not isinstance(ai, dict):
+            return []
+        lines: list[str] = []
+        model = ai.get("model")
+        if model:
+            lines.append(f"  % AI Generated: {self._sanitize_comment(str(model))}")
+        prompt = ai.get("prompt")
+        if prompt:
+            truncated = self._sanitize_comment(str(prompt))[:120]
+            lines.append(f"  % Prompt: {truncated}")
+        neg = ai.get("negative_prompt")
+        if neg:
+            truncated_neg = self._sanitize_comment(str(neg))[:120]
+            lines.append(f"  % Negative: {truncated_neg}")
+        params = ai.get("params")
+        if params:
+            pairs = ", ".join(
+                f"{self._sanitize_comment(str(k))}={self._sanitize_comment(str(v))}"
+                for k, v in params.items()
+            )
+            lines.append(f"  % Params: {pairs}")
+        return lines
+
     def render_figure(self, node: Node) -> str:
         fig = cast(Figure, node)
         meta = node.metadata
@@ -325,6 +362,9 @@ class LaTeXRenderer:
             lines.append(f"\\caption{{{caption}}}")
         if label:
             lines.append(f"\\label{{{label}}}")
+
+        # AI metadata comments before closing figure (AI 元数据注释在关闭图环境之前)
+        lines.extend(self._render_ai_comments(meta.get("ai")))
 
         lines.append("\\end{figure}")
         return "\n".join(lines) + "\n"
@@ -353,6 +393,9 @@ class LaTeXRenderer:
                 lines.append(f"\\caption{{{caption}}}")
             if label:
                 lines.append(f"\\label{{{label}}}")
+
+            # AI metadata comments before closing figure (AI 元数据注释在关闭图环境之前)
+            lines.extend(self._render_ai_comments(meta.get("ai")))
 
             lines.append("\\end{figure}")
             return "\n".join(lines) + "\n"
