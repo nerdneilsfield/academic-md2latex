@@ -70,6 +70,7 @@ class LaTeXRenderer:
         self.thematic_break = thematic_break
         self.locale = locale
         self._fn_defs: dict[str, Node] = {}  # footnote defs by id (按 ID 索引的脚注定义)
+        self._expanding_fn_refs: set[str] = set()  # circular expansion guard (循环展开守卫)
         self.diag = diag
 
     def render(self, node: Node) -> str:
@@ -107,6 +108,7 @@ class LaTeXRenderer:
     def render_document(self, node: Node) -> str:
         # Reset per-document state to allow renderer reuse (重置每文档状态以支持复用)
         self._fn_defs.clear()
+        self._expanding_fn_refs.clear()  # Reset circular expansion guard (重置循环展开守卫)
         # Pre-scan: collect all FootnoteDef nodes (预扫描：收集所有脚注定义)
         self._collect_footnote_defs(node)
         body = self.render_children(node)
@@ -446,19 +448,28 @@ class LaTeXRenderer:
     def render_footnote_ref(self, node: Node) -> str:
         """Expand footnote inline at reference site (在引用处展开脚注).
 
+        Uses _expanding_fn_refs to detect and break circular expansion.
+        (使用 _expanding_fn_refs 检测并中断循环展开。)
+
         Args:
             node: FootnoteRef node (FootnoteRef 节点)
 
         Returns:
-            \\footnote{content} with the content from the matching def (内联展开的脚注)
+            \\footnote{content} or circular/unknown fallback (内联展开的脚注或回退标记)
         """
         fr = cast(FootnoteRef, node)
         fn_def = self._fn_defs.get(fr.ref_id)
         if fn_def is not None:
-            # Render def children and strip whitespace (渲染定义内容并去除首尾空白)
-            content = self.render_children(fn_def).strip()
+            # Guard: if already expanding this def, break the cycle (守卫：避免循环展开)
+            if fr.ref_id in self._expanding_fn_refs:
+                return f"\\footnote{{[circular:{fr.ref_id}]}}"
+            self._expanding_fn_refs.add(fr.ref_id)
+            try:
+                content = self.render_children(fn_def).strip()
+            finally:
+                self._expanding_fn_refs.discard(fr.ref_id)
             return f"\\footnote{{{content}}}"
-        # Fallback: unknown ref — emit marker (回退：未知引用)
+        # Fallback: unknown ref (回退：未知引用)
         return f"\\footnote{{[{fr.ref_id}]}}"
 
     def render_footnote_def(self, node: Node) -> str:

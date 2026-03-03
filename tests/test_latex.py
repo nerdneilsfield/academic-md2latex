@@ -599,6 +599,26 @@ class TestLatexFootnotes:
         result = LaTeXRenderer().render(fn_def)
         assert result == ""
 
+    def test_footnote_self_reference_no_recursion(self) -> None:
+        """Self-referencing footnote does not cause RecursionError.
+
+        自引用脚注不引发 RecursionError.
+
+        A FootnoteDef whose children contain a FootnoteRef to itself must
+        produce output without infinite recursion. (自引用脚注不应无限递归。)
+        """
+        # [^0]: see[^0] — footnote def references itself (脚注定义引用自身)
+        inner_ref = FootnoteRef(ref_id="0")
+        fn_def = FootnoteDef(
+            def_id="0",
+            children=[Paragraph(children=[Text(content="see "), inner_ref])],
+        )
+        p = Paragraph(children=[Text(content="Here"), FootnoteRef(ref_id="0")])
+        doc = Document(children=[p, fn_def])
+        # Must terminate and produce some footnote command (必须终止并产出脚注命令)
+        result = LaTeXRenderer().render(doc)
+        assert "\\footnote" in result
+
 
 # ── Task 10: LaTeX Locale Overrides ───────────────────────────────────────────
 
