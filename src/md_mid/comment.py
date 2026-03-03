@@ -189,6 +189,7 @@ def _collect_document_directives(doc: Document, diag: DiagCollector) -> None:
                 f"Document directive '<!-- {key}: ... -->' found after content, ignored",
                 _pos_from_node(child),
             )
+            to_remove.append(i)  # remove leaked directive node (删除泄漏的指令节点)
             continue
 
         # 重复指令（Duplicate directive）
