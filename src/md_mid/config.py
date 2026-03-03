@@ -247,7 +247,7 @@ def load_config_file(path: Path) -> dict[str, object]:
         return {}
 
     try:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = _yaml.load(f)
     except Exception:
         _log.warning("Failed to parse config file: %s", path)
