@@ -73,6 +73,30 @@ from md_mid.parser import parse
     default=None,
     help="Bibliography output strategy",
 )
+@click.option(
+    "--generate-figures", "generate_figures",
+    is_flag=True,
+    default=False,
+    help="Generate AI figures (ai-generated: true) via runner before rendering",
+)
+@click.option(
+    "--figures-runner", "figures_runner",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Path to nanobanana-compatible runner script",
+)
+@click.option(
+    "--figures-config", "figures_config",
+    type=click.Path(exists=True, path_type=Path),
+    default=None,
+    help="TOML config for runner (API key, model, etc.)",
+)
+@click.option(
+    "--force-regenerate", "force_regenerate",
+    is_flag=True,
+    default=False,
+    help="Re-generate AI figures even if image files already exist",
+)
 @click.version_option(version=__version__)
 def main(
     input: Path,
@@ -88,6 +112,10 @@ def main(
     template_path: Path | None,
     config_path: Path | None,
     bibliography_mode: str | None,
+    generate_figures: bool,
+    figures_runner: Path | None,
+    figures_config: Path | None,
+    force_regenerate: bool,
 ) -> None:
     """md-mid: 学术写作中间格式转换工具"""
     # 读取输入：stdin 或文件 (Read input: stdin or file)
@@ -147,6 +175,43 @@ def main(
         for d in diag.errors:
             click.echo(str(d), err=True)
         raise SystemExit(1)
+
+    # Optional AI figure generation (可选 AI 图片生成)
+    if generate_figures:
+        from md_mid.genfig import run_generate_figures
+
+        # Resolve runner path (解析 runner 路径)
+        if figures_runner is None:
+            # Default: nanobanana.py from generate-figures skill (默认 runner 路径)
+            skill_runner = (
+                Path.home() / ".claude" / "skills" / "generate-figures"
+                / "tools" / "fig" / "nanobanana.py"
+            )
+            if not skill_runner.exists():
+                click.echo(
+                    "[generate-figures] Runner not found. "
+                    "Specify --figures-runner PATH.",
+                    err=True,
+                )
+                raise SystemExit(1)
+            figures_runner = skill_runner
+
+        # Base directory for resolving image paths (图片路径解析基目录)
+        base_dir = Path(filename).parent if filename != "<stdin>" else Path.cwd()
+
+        success, fail = run_generate_figures(
+            east,
+            base_dir=base_dir,
+            runner_path=figures_runner,
+            config=figures_config,
+            force=force_regenerate,
+            echo=lambda msg: click.echo(msg, err=True),
+        )
+        if fail > 0:
+            click.echo(
+                f"[generate-figures] {fail} figure(s) failed to generate.",
+                err=True,
+            )
 
     if effective_target == "latex":
         # Inject resolved preamble metadata into EAST for renderer use

@@ -376,3 +376,27 @@ def test_html_default_suffix(tmp_path: Path) -> None:
     result = CliRunner().invoke(main, [str(src), "-t", "html"])
     assert result.exit_code == 0
     assert (tmp_path / "t.mid.html").exists()
+
+
+# ── Phase 5 Task 4: --generate-figures CLI ───────────────────────────────────
+
+
+def test_generate_figures_flag_no_runner_exits(tmp_path: Path) -> None:
+    """--generate-figures with missing runner exits non-zero (无 runner 时退出非零)."""
+    src = tmp_path / "t.mid.md"
+    # Include a figure with AI metadata so the runner is actually needed
+    # (包含 AI 元数据的图，使 runner 被实际加载)
+    src.write_text(
+        "# Hello\n\n"
+        "![alt](gen.png)\n"
+        "<!-- ai-generated: true -->\n"
+        "<!-- ai-prompt: blue sky -->\n"
+    )
+    out = tmp_path / "out.tex"
+    result = CliRunner().invoke(
+        main,
+        [str(src), "-o", str(out), "--generate-figures",
+         "--figures-runner", str(tmp_path / "nonexistent.py")],
+    )
+    # Should fail because runner does not exist (runner 不存在，应失败)
+    assert result.exit_code != 0
