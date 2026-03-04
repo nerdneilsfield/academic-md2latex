@@ -56,6 +56,24 @@ _DEFAULTS: dict[str, object] = {
 }
 
 
+# Built-in presets (内置预设字典)
+_PRESETS: dict[str, dict[str, object]] = {
+    "zh": {
+        "documentclass": "ctexart",
+        "classoptions": ["12pt", "a4paper"],
+        "packages": ["amsmath", "graphicx", "hyperref"],
+        "locale": "zh",
+        "preamble": "% Compiled with XeLaTeX recommended (建议使用 XeLaTeX 编译)\n",
+    },
+    "en": {
+        "documentclass": "article",
+        "classoptions": ["12pt", "a4paper"],
+        "packages": ["amsmath", "graphicx", "hyperref"],
+        "locale": "en",
+    },
+}
+
+
 @dataclass
 class WenqiaoConfig:
     """Central configuration object (中央配置对象).
@@ -167,10 +185,11 @@ def resolve_config(
     east_meta: dict[str, object] | None = None,
     config_dict: dict[str, object] | None = None,
     template_dict: dict[str, object] | None = None,
+    preset_name: str | None = None,
 ) -> WenqiaoConfig:
     """Resolve final config by merging dict layers in priority order (按优先级合并配置).
 
-    Priority (high -> low): CLI > document directives > config file > template > defaults.
+    Priority (high -> low): CLI > document directives > config file > template > preset > defaults.
     Each layer is a plain dict with only the keys it explicitly sets.
     dict.update() naturally preserves lower-priority values for absent keys.
 
@@ -179,9 +198,13 @@ def resolve_config(
         east_meta: Document directive metadata (文档指令元数据)
         config_dict: Flattened config file dict (配置文件扁平字典)
         template_dict: Template file dict (模板文件字典)
+        preset_name: Optional built-in preset name, e.g. "zh" or "en" (可选内置预设名)
 
     Returns:
         Fully resolved WenqiaoConfig (完全解析的配置)
+
+    Raises:
+        ValueError: If preset_name is not None and not in _PRESETS (预设名无效时抛出)
     """
     # Start with defaults (从默认值开始)
     merged: dict[str, object] = _DEFAULTS.copy()
@@ -189,6 +212,19 @@ def resolve_config(
     merged["classoptions"] = list(cast(list[str], _DEFAULTS["classoptions"]))
     merged["packages"] = list(cast(list[str], _DEFAULTS["packages"]))
     merged["package_options"] = dict(cast(dict[str, str], _DEFAULTS["package_options"]))
+
+    # Layer preset — sits above defaults, below template (层: 预设，高于默认值，低于模板)
+    if preset_name is not None:
+        if preset_name not in _PRESETS:
+            raise ValueError(
+                f"unknown preset {preset_name!r}; available: {list(_PRESETS)}"
+                f" (未知预设 {preset_name!r}；可用预设: {list(_PRESETS)})"
+            )
+        merged.update(_PRESETS[preset_name])
+        # Deep-copy list values to prevent aliasing (深拷贝列表防止别名)
+        for key in _LIST_FIELDS:
+            if key in merged and isinstance(merged[key], list):
+                merged[key] = list(merged[key])
 
     # Layer template (层: 模板)
     if template_dict:

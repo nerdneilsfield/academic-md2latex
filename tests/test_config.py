@@ -235,3 +235,51 @@ def test_config_type_error_classoptions_int_element() -> None:
     """classoptions with int element raises TypeError (classoptions 含 int 元素时抛出 TypeError)."""
     with pytest.raises(TypeError, match=r"classoptions\[0\]"):
         WenqiaoConfig.from_dict({"classoptions": [12]})
+
+
+# --- Preset tests (预设测试) ---
+
+
+class TestPresets:
+    """Tests for built-in presets (内置预设测试)."""
+
+    def test_zh_preset_sets_ctexart(self) -> None:
+        """zh preset should set documentclass to ctexart (zh 预设应设置 documentclass)."""
+        cfg = resolve_config(preset_name="zh")
+        assert cfg.documentclass == "ctexart"
+        assert cfg.locale == "zh"
+
+    def test_en_preset_sets_locale_en(self) -> None:
+        """en preset locale should be en (en 预设的 locale 应为 en)."""
+        cfg = resolve_config(preset_name="en")
+        assert cfg.locale == "en"
+        assert cfg.documentclass == "article"
+
+    def test_directive_overrides_preset(self) -> None:
+        """Document directive overrides preset (文档指令应覆盖预设)."""
+        cfg = resolve_config(
+            preset_name="zh",
+            east_meta={"documentclass": "report"},
+        )
+        assert cfg.documentclass == "report"
+        assert cfg.locale == "zh"  # not overridden, preset value preserved (未覆盖，保留预设值)
+
+    def test_template_overrides_preset(self) -> None:
+        """Template overrides preset (模板应覆盖预设)."""
+        cfg = resolve_config(
+            preset_name="zh",
+            template_dict={"locale": "en"},
+        )
+        assert cfg.locale == "en"  # template wins over preset (模板优先于预设)
+
+    def test_unknown_preset_raises(self) -> None:
+        """Unknown preset name should raise ValueError (未知预设应抛出 ValueError)."""
+        with pytest.raises(ValueError, match="unknown preset"):
+            resolve_config(preset_name="nonexistent")
+
+    def test_none_preset_is_noop(self) -> None:
+        """No preset (None) should behave like current defaults (None 预设不影响默认行为)."""
+        cfg_no_preset = resolve_config()
+        cfg_none = resolve_config(preset_name=None)
+        assert cfg_no_preset.documentclass == cfg_none.documentclass
+        assert cfg_no_preset.locale == cfg_none.locale
