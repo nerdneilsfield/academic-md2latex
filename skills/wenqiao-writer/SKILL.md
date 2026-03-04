@@ -22,9 +22,9 @@ You are a specialist for writing `.mid.md` files — the academic Markdown inter
 ```
 HEADER (before first content)        ATTACH-UP (after content node)
 <!-- documentclass: article -->       <!-- label: sec:intro -->
-<!-- classoptions: [12pt, a4] -->     <!-- caption: My figure -->
-<!-- packages: [amsmath, ctex] -->    <!-- width: 0.8\textwidth -->
-<!-- package-options: {hyper: []} --> <!-- placement: htbp -->
+<!-- classoptions: [12pt, a4paper] --> <!-- caption: My figure -->
+<!-- packages: [amsmath, ctex] -->     <!-- width: 0.8\textwidth -->
+<!-- package-options: {geometry: "margin=1in"} --> <!-- placement: htbp -->
 <!-- bibliography: refs.bib -->       <!-- centering: true -->
 <!-- bibstyle: IEEEtran -->           <!-- options: ... -->
 <!-- title: ... -->                   <!-- args: ... -->
