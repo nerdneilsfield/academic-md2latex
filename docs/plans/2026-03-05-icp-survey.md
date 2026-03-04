@@ -1,201 +1,197 @@
-# ICP Survey — Implementation Plan
+# ICP 算法综述 — 写作计划
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Write a complete wenqiao `.mid.md` academic survey on ICP algorithms, variants, software and hardware acceleration — fully citeable, figure-rich, and free of AI writing patterns.
+**目标：** 以 wenqiao `.mid.md` 格式写一篇关于 ICP 算法发展与变体、软件加速、硬件加速的完整学术综述。
 
-**Architecture:** Parallel chapter drafting (7 independent `.mid.md` fragments) → parallel BibTeX harvest via drflow → sequential merge into `examples/icp-survey.mid.md`.
+**技术栈：** drflow MCP（论文检索 + bibtex）、wenqiao `.mid.md` 格式、AI 生成插图（`ai-*` 指令）、BibTeX 存入 `examples/icp.bib`。
 
-**Tech Stack:** drflow MCP (paper search + bibtex), wenqiao `.mid.md` format, AI-generated figures via `ai-*` directives, BibTeX in `examples/icp.bib`.
+**文件结构：**
+
+```
+examples/
+├── icp.bib                         ← 所有 BibTeX 条目
+├── icp-survey-outline.md           ← 原始大纲（已存在）
+├── icp-survey.mid.md               ← 最终合并文档
+├── icp-survey/
+│   ├── ch1-intro.mid.md
+│   ├── ch2-background.mid.md
+│   ├── ch3-variants.mid.md
+│   ├── ch4-software.mid.md
+│   ├── ch5-hardware.mid.md
+│   ├── ch6-benchmarks.mid.md
+│   └── ch7-conclusion.mid.md
+└── images/
+    ├── icp-pipeline.png
+    ├── icp-taxonomy.png
+    ├── convergence-curves.png
+    ├── icp-timeline.png
+    ├── dl-registration.png
+    ├── fpga-pipeline.png
+    ├── hw-comparison.png
+    └── codesign-space.png
+```
 
 ---
 
-## Anti-AI Writing Rules (Enforce Throughout)
+## 写作规范（贯穿全文）
 
-Apply these rules in EVERY writing step. Violating them requires immediate rewrite before committing.
+### 反 AI 写作规则
 
-**Banned phrases** (flag and replace):
-- "Furthermore", "Moreover", "Additionally", "In addition"
+以下词组一律禁止，发现即替换：
+
+- "Furthermore / Moreover / Additionally / In addition"
 - "It is worth noting / It should be noted / It is important to note"
 - "In this section/paper/survey, we discuss/present/review/examine"
-- "This paper provides a comprehensive…", "We delve into…"
-- "In conclusion / To summarize / In summary" at paragraph start
+- "This paper provides a comprehensive…" / "We delve into…"
+- "In conclusion / To summarize / In summary"（段落开头）
 - "plays a crucial/significant/key/pivotal role"
-- "state-of-the-art" (use concrete year + metric instead)
+- "state-of-the-art"（改用年份 + 具体指标）
 
-**Required style**:
-- Start paragraphs with a **technical claim or number**, not a meta-statement
-- Mix sentence lengths: ≥ 1 sentence under 8 words per paragraph
-- Cite actual numbers when available: `ICP achieves 2.3 mm RMSE on ETH...`
-- Use active voice for algorithm steps: "The algorithm selects...", not "Points are selected..."
-- Define abbreviations exactly once (at first use); thereafter use abbreviation only
-- Do not restate what a section will do — just do it
+**写作风格要求：**
+
+- 段落以**技术断言或数字**开头，不以元陈述开头
+- 每段至少一句 8 词以内的短句
+- 引用实际数据：从论文里读，不要预设
+- 算法步骤用主动语态："The algorithm selects…" 而非 "Points are selected…"
+- 缩写在首次出现时定义，之后只用缩写
+- 不要预告章节内容——直接写内容
+
+### wenqiao 格式规范
+
+- 章节片段（`icp-survey/ch*.mid.md`）：**裸内容**，无文档头，直接从 `## N. 标题` 开始
+- 正文引用格式：`[作者 年份](cite:key)`，**不用** `\cite{key}`
+- `<!-- begin: raw -->...<!-- end: raw -->` 块内的 LaTeX 才用 `\cite{key}`（直接传给 LaTeX）
+- 标签附在**目标节点下方**：先写图/表/公式，再写 `<!-- label: ... -->`
+- BibTeX key 规范：`AuthorYYYYacronym`，如 `Besl1992icp`、`Chen1992p2plane`
+
+### 图片规范
+
+- 图片文件放 `examples/images/`
+- 每张图标注 `<!-- ai-generated: true -->`
+- `<!-- ai-prompt: ... -->` 在**执行时**根据上下文现写，不在此计划中预填
+- 提示词语言：英文；图中需出现的中文标签用 `""` 包裹，如 `"算法流程"`
 
 ---
 
-## Phase 0: Infrastructure Setup
+## 插图清单
 
-### Task 0.1: Create directory structure and empty BibTeX file
+| 标签 | 文件 | 内容描述 |
+|------|------|---------|
+| `fig:icp-pipeline` | `images/icp-pipeline.png` | 经典 ICP 四步流程图 |
+| `fig:taxonomy` | `images/icp-taxonomy.png` | 变体分类树（6 大分支）|
+| `fig:convergence` | `images/convergence-curves.png` | P2P / P2Plane / AA-ICP 收敛曲线对比 |
+| `fig:timeline` | `images/icp-timeline.png` | 1992–2025 发展时间轴 |
+| `fig:dl-taxonomy` | `images/dl-registration.png` | 深度学习配准方法分类 |
+| `fig:fpga-pipeline` | `images/fpga-pipeline.png` | FPGA 流式流水线架构 |
+| `fig:hw-comparison` | `images/hw-comparison.png` | CPU/GPU/FPGA/ASIC/PIM 延迟与功耗对比柱状图 |
+| `fig:codesign-space` | `images/codesign-space.png` | 精度–延迟–功耗 Pareto 前沿散点图 |
 
-**Files:**
-- Create: `examples/icp.bib`
-- Create: `examples/images/` (directory)
-- Create: `examples/icp-survey/` (directory for chapter fragments)
+---
 
-**Step 1:** Create empty BibTeX file
+## Phase 0：基础设施
+
+创建目录结构和空 BibTeX 文件，提交骨架：
 
 ```bash
+mkdir -p examples/images examples/icp-survey
 touch examples/icp.bib
-```
-
-**Step 2:** Verify directories exist
-
-```bash
-ls examples/images/ examples/icp-survey/
-```
-
-**Step 3:** Commit skeleton
-
-```bash
-git add examples/icp.bib examples/images/.gitkeep examples/icp-survey/.gitkeep
-git commit -m "chore: scaffold ICP survey directories and empty bib"
+git add examples/ && git commit -m "chore: scaffold ICP survey directories"
 ```
 
 ---
 
-## Phase 1: BibTeX Harvest (5 parallel groups)
+## Phase 1：BibTeX 收集（5 组并行）
 
-Run all Task 1.x groups **in parallel** — each group writes to its **own temp file** (NOT shared `icp.bib`) to avoid concurrent write corruption. Task 1.Z merges them.
+每组写入**独立临时文件**（避免并发冲突），最后由 Task 1.Z 合并。
 
-Each group follows the same pattern:
-1. Call `mcp__drflow__search_papers` or `mcp__drflow__search_papers_by_keyword`
-2. For each relevant result, call `mcp__drflow__get_paper_bibtex`
-3. Write BibTeX entries to the group's **own temp file** (see filename in each task)
+对每篇相关论文：用 `mcp__drflow__search_papers` 或 `mcp__drflow__search_papers_by_keyword` 检索，用 `mcp__drflow__get_paper_bibtex` 获取条目，写入对应临时文件。
 
-### Task 1.A: Classic ICP foundations
+### Task 1.A：经典 ICP 基础
 
-**Target papers:** Besl & McKay 1992, Chen & Medioni 1992, TrICP, Pomerleau survey, Horn quaternion, Kabsch SVD.
+**目标论文：** Besl & McKay 1992、Chen & Medioni 1992、TrICP、Pomerleau survey、Horn 四元数法、Kabsch SVD。
 
-**Step 1:** Search and collect
+**写入：** `examples/icp-1A.bib`
 
-```
-mcp__drflow__search_papers("iterative closest point original 1992 Besl McKay", limit=5)
-mcp__drflow__search_papers("point to plane ICP Chen Medioni surface normals", limit=5)
-mcp__drflow__search_papers("trimmed ICP TrICP outlier robust point cloud", limit=5)
-mcp__drflow__search_papers("review point cloud registration mobile robotics Pomerleau", limit=3)
-```
-
-**Step 2:** For each paper_id found, fetch bibtex
-
-```
-mcp__drflow__get_paper_bibtex(paper_id="<id>")
-```
-
-**Step 3:** Write all entries to `examples/icp-1A.bib` (NOT to `icp.bib` directly)
-
-**BibTeX key convention:** `AuthorYYYYacronym` — e.g., `Besl1992icp`, `Chen1992p2plane`, `Chetverikov2002tricp`, `Pomerleau2015review`. Use this convention in ALL tasks and all raw LaTeX `\cite{}` calls.
+**参考搜索词：**
+- `"iterative closest point original 1992 Besl McKay"`
+- `"point to plane ICP Chen Medioni surface normals"`
+- `"trimmed ICP TrICP outlier robust point cloud"`
+- `"review point cloud registration mobile robotics Pomerleau"`
 
 ---
 
-### Task 1.B: Algorithm variant papers
+### Task 1.B：算法变体论文
 
-**Target:** AA-ICP, VICP, Go-ICP, Dual Quaternion ICP, Correntropy ICP, DICP, RANSAC variants, FGR, FPFH, Super4PCS.
+**目标论文：** AA-ICP、VICP、Go-ICP、Dual Quaternion ICP、Correntropy ICP、DICP、RANSAC 变体、FGR、FPFH、Super4PCS。
 
-**Step 1:** Search
+**写入：** `examples/icp-1B.bib`
 
-```
-mcp__drflow__search_papers("Anderson acceleration ICP convergence", limit=5)
-mcp__drflow__search_papers("velocity prediction ICP dynamic scanning", limit=5)
-mcp__drflow__search_papers("Go-ICP global optimal branch bound", limit=5)
-mcp__drflow__search_papers("fast global registration FGR FPFH", limit=5)
-mcp__drflow__search_papers("correntropy robust ICP outlier", limit=5)
-mcp__drflow__search_papers("Doppler ICP dynamic objects 4D LiDAR", limit=5)
-mcp__drflow__search_papers("dual quaternion point cloud registration", limit=5)
-```
-
-**Step 2:** Fetch bibtex for each relevant result, write to `examples/icp-1B.bib`.
+**参考搜索词：**
+- `"Anderson acceleration ICP convergence"`
+- `"velocity prediction ICP dynamic scanning"`
+- `"Go-ICP global optimal branch bound"`
+- `"fast global registration FGR FPFH"`
+- `"correntropy robust ICP outlier"`
+- `"Doppler ICP dynamic objects 4D LiDAR"`
 
 ---
 
-### Task 1.C: Deep learning registration papers
+### Task 1.C：深度学习配准论文
 
-**Target:** DCP, DeepICP, DeepVCP, RPM-Net, NAR-*ICP, PointDifformer, Learning single optimization.
+**目标论文：** DCP、DeepICP、DeepVCP、RPM-Net、NAR-\*ICP、PointDifformer、Learning single optimization。
 
-**Step 1:** Search
+**写入：** `examples/icp-1C.bib`
 
-```
-mcp__drflow__search_papers("deep closest point transformer registration ICCV 2019", limit=5)
-mcp__drflow__search_papers("DeepICP end-to-end neural network registration", limit=5)
-mcp__drflow__search_papers("RPM-Net Sinkhorn soft assignment registration", limit=5)
-mcp__drflow__search_papers("neural algorithm reasoning ICP execution 2025", limit=5)
-mcp__drflow__search_papers("diffusion transformer point cloud registration 2024", limit=5)
-mcp__drflow__search_papers("learning registration single optimization problem 2025", limit=5)
-```
-
-**Step 2:** Fetch bibtex, write to `examples/icp-1C.bib`.
+**参考搜索词：**
+- `"deep closest point transformer registration ICCV 2019"`
+- `"RPM-Net Sinkhorn soft assignment registration"`
+- `"neural algorithm reasoning ICP execution 2025"`
+- `"diffusion transformer point cloud registration 2024"`
 
 ---
 
-### Task 1.D: Hardware acceleration papers
+### Task 1.D：硬件加速论文
 
-**Target:** Tigris, Tartan, QuickNN, PICK PIM, SoC-FPGA ICP, HA-BFNN-ICP, NDT FPGA, FPGA-PointNet, Multi-Mode FPGA, Loop Closure FPGA, GPU KNN TACO 2025.
+**目标论文：** Tigris、Tartan、QuickNN、PICK PIM、SoC-FPGA ICP、HA-BFNN-ICP、NDT FPGA、FPGA-PointNet、Multi-Mode FPGA、GPU KNN TACO 2025。
 
-**Step 1:** Search
+**写入：** `examples/icp-1D.bib`
 
-```
-mcp__drflow__search_papers("Tigris 3D perception processor MICRO 2019", limit=5)
-mcp__drflow__search_papers("Tartan robotics processor ISCA 2024", limit=5)
-mcp__drflow__search_papers("QuickNN KD-tree GPU accelerator HPCA", limit=5)
-mcp__drflow__search_papers("PICK SRAM PIM KNN accelerator DAC 2025", limit=5)
-mcp__drflow__search_papers("FPGA ICP accelerator SoC Zynq robot", limit=5)
-mcp__drflow__search_papers("HA-BFNN ICP FPGA brute force nearest neighbor 2025", limit=5)
-mcp__drflow__search_papers("NDT FPGA localization autonomous driving", limit=5)
-mcp__drflow__search_papers("FPGA point cloud registration PointNet 2025", limit=5)
-mcp__drflow__search_papers("GPU voxel KNN point cloud registration TACO 2025", limit=5)
-```
-
-**Step 2:** Fetch bibtex, write to `examples/icp-1D.bib`.
+**参考搜索词：**
+- `"Tigris 3D perception processor MICRO 2019"`
+- `"Tartan robotics processor ISCA 2024"`
+- `"QuickNN KD-tree GPU accelerator HPCA"`
+- `"PICK SRAM PIM KNN accelerator DAC 2025"`
+- `"HA-BFNN ICP FPGA brute force nearest neighbor 2025"`
+- `"NDT FPGA localization autonomous driving"`
+- `"GPU voxel KNN point cloud registration TACO 2025"`
 
 ---
 
-### Task 1.E: Application and benchmark papers
+### Task 1.E：应用与基准论文
 
-**Target:** ETH dataset, KITTI LiDAR, nuScenes, 3DMatch, ModelNet40, LiDAR SLAM surveys.
+**目标论文：** ETH dataset、KITTI LiDAR、nuScenes、3DMatch、ModelNet40、LiDAR SLAM surveys。
 
-**Step 1:** Search
+**写入：** `examples/icp-1E.bib`
 
-```
-mcp__drflow__search_papers("ETH benchmark point cloud registration outdoor", limit=5)
-mcp__drflow__search_papers("KITTI LiDAR odometry benchmark dataset", limit=5)
-mcp__drflow__search_papers("3DMatch indoor benchmark registration descriptor", limit=5)
-mcp__drflow__search_papers("LiDAR SLAM survey autonomous driving localization", limit=3)
-```
-
-**Step 2:** Fetch bibtex, write to `examples/icp-1E.bib`.
+**参考搜索词：**
+- `"ETH benchmark point cloud registration outdoor"`
+- `"KITTI LiDAR odometry benchmark dataset"`
+- `"3DMatch indoor benchmark registration descriptor"`
+- `"LiDAR SLAM survey autonomous driving localization"`
 
 ---
 
-### Task 1.Z: Merge and deduplicate BibTeX (runs AFTER 1.A–1.E)
+### Task 1.Z：合并与去重（在 1.A–1.E 之后）
 
-**Step 1:** Merge all temp files
+合并五个临时文件，去除重复 key，写入 `examples/icp.bib`：
 
 ```bash
 cat examples/icp-1A.bib examples/icp-1B.bib examples/icp-1C.bib \
     examples/icp-1D.bib examples/icp-1E.bib > examples/icp-all.bib
-```
 
-**Step 2:** Check for duplicate keys
-
-```bash
-grep "^@" examples/icp-all.bib | grep -oE '\{[^,]+' | tr -d '{' | sort | uniq -d
-```
-
-**Step 3:** Remove duplicates (keep first occurrence), write final file
-
-```bash
 python3 - << 'EOF'
 import re
-
 text = open('examples/icp-all.bib').read()
 entries = re.split(r'(?=^@)', text, flags=re.MULTILINE)
 seen, output = set(), []
@@ -211,445 +207,265 @@ for entry in entries:
 open('examples/icp.bib', 'w').write('\n'.join(output))
 print(f'Final: {len(seen)} unique entries')
 EOF
-```
 
-**Step 3:** Commit
-
-```bash
-git add examples/icp.bib
-git commit -m "feat: add all ICP survey BibTeX entries from drflow"
+git add examples/icp.bib && git commit -m "feat: collect all ICP survey BibTeX entries"
 ```
 
 ---
 
-## Phase 2: Chapter Drafts (7 parallel fragments)
+## Phase 2：章节写作（7 章并行）
 
-Each task writes one file to `examples/icp-survey/`. Fragments are **bare content** — no `<!-- documentclass -->` header (that goes in the final merge). Each fragment starts directly with `## N. Chapter Title`.
-
-Figure image files go to `examples/images/`. Mark each figure with `<!-- ai-generated: true -->` and write the `<!-- ai-prompt: ... -->` at execution time based on the surrounding content — **do not pre-write prompts in this plan**. Prompt style rule: English only; any Chinese labels that should appear on the figure go in `""`, e.g. `"算法"`.
-
-All citations in Markdown body text use `[Author Year](cite:key)` syntax. Inside `<!-- begin: raw -->...<!-- end: raw -->` LaTeX blocks, use `\cite{key}` as required — raw blocks are passed verbatim to LaTeX and are the only exception.
-
-### Figure inventory (reference for all chapter agents)
-
-| Label | File | Description |
-|---|---|---|
-| `fig:icp-pipeline` | `images/icp-pipeline.png` | Classic 4-step ICP flowchart |
-| `fig:taxonomy` | `images/icp-taxonomy.png` | Variant taxonomy tree (6 branches) |
-| `fig:convergence` | `images/convergence-curves.png` | P2P vs P2Plane vs AA-ICP convergence |
-| `fig:timeline` | `images/icp-timeline.png` | Chronological development 1992–2025 |
-| `fig:dl-taxonomy` | `images/dl-registration.png` | DL-based method taxonomy |
-| `fig:fpga-pipeline` | `images/fpga-pipeline.png` | FPGA streaming pipeline architecture |
-| `fig:hw-comparison` | `images/hw-comparison.png` | Latency/power bar chart: CPU/GPU/FPGA/ASIC/PIM |
-| `fig:codesign-space` | `images/codesign-space.png` | Accuracy–latency–power Pareto frontier |
+每章写一个独立 `.mid.md` 片段，存入 `examples/icp-survey/`。片段无文档头，直接从 `## N. 标题` 开始。读论文（`mcp__drflow__get_paper_summary`）后按实际内容填写，不要预填数字。
 
 ---
 
-### Task 2.1: Chapter 1 — Introduction
+### 第 1 章：Introduction
 
-**File:** `examples/icp-survey/ch1-intro.mid.md`
+**文件：** `examples/icp-survey/ch1-intro.mid.md`
 
-**Content requirements:**
-- Motivate with concrete application numbers (AV market size, robot deployment scale)
-- One paragraph on the 1992 dual origin (Besl/McKay and Chen/Medioni)
-- Survey structure overview — one sentence per chapter, no meta-filler
-- Figure: `fig:timeline` with AI prompt for chronological diagram
-- ≥ 4 citations
+**章节标签：** `<!-- label: sec:intro -->`
 
-**Wenqiao specifics:**
-- Section label: `<!-- label: sec:intro -->`
-- No `abstract` block here (goes in final document header)
+**内容结构：**
+- 开篇：点云配准的规模与重要性（用具体应用数字，从论文里读）
+- 历史段：1992 年双起源（Besl/McKay 与 Chen/Medioni）
+- ICP 的三个核心挑战：初始化、异常值、计算量（各一句话概括）
+- 综述结构导览：每章一句话，不写 "本文将…" 式元陈述
 
-**Template:**
+**必须包含：**
+- 图：`fig:timeline`（时间轴图）
+- ≥ 4 个引用
 
-```markdown
-## 1. Introduction
-<!-- label: sec:intro -->
-
-[Opening technical claim about point cloud registration scale/importance]
-
-[Historical paragraph: 1992 dual origin, cite Besl and Chen]
-
-[3–4 sentences: what makes ICP hard — initialization, outliers, scale]
-
-![ICP Development Timeline](../images/icp-timeline.png)
-<!-- caption: Development timeline of ICP and its major variants, 1992–2025. -->
-<!-- label: fig:timeline -->
-<!-- width: \textwidth -->
-<!-- ai-generated: true -->
-<!-- ai-prompt: | [write at execution time] -->
-
-[Structure paragraph: one sentence per chapter]
-```
-
-**Step 1:** Write the fragment following the template above.
-
-**Step 2:** Verify no banned phrases appear:
-
-```bash
-grep -iE "furthermore|moreover|it is worth|this section|comprehensive|crucial role|state-of-the-art" examples/icp-survey/ch1-intro.mid.md
-```
-
-Expected: no matches. Fix any hits before proceeding.
-
-**Step 3:** Commit
-
-```bash
-git add examples/icp-survey/ch1-intro.mid.md examples/images/
-git commit -m "feat(ch1): add introduction fragment"
-```
+**写完后：** 检查禁用词组（grep 命令见规范部分），提交 `feat(ch1)`。
 
 ---
 
-### Task 2.2: Chapter 2 — Background and Preliminaries
+### 第 2 章：Background and Preliminaries
 
-**File:** `examples/icp-survey/ch2-background.mid.md`
+**文件：** `examples/icp-survey/ch2-background.mid.md`
 
-**Content requirements:**
-- Mathematical formulation: rigid body transform $T = (R, t) \in SE(3)$, objective function
-- Algorithm box: the 4-step ICP loop as numbered list (not pseudocode env — keep it readable)
-- Convergence theorem (use `<!-- begin: theorem -->` environment)
-- Challenge list with ONE concrete example per challenge
-- Figure: `fig:icp-pipeline`
+**章节标签：** `<!-- label: sec:background -->`
 
-**Key equations to include (with labels):**
+**内容结构：**
+- 刚体变换数学表达：$T = (R, t) \in SE(3)$，目标函数（P2P 和 P2Plane 两个变体，均标 `<!-- label: eq:... -->`）
+- ICP 四步循环：以编号列表呈现（不用 algorithm 环境）
+- 收敛定理：使用 `<!-- begin: theorem -->...<!-- end: theorem -->` 环境；定理内容从 Besl 1992 论文中读取
+- 挑战清单：每个挑战配一个具体例子（数据从论文里读）
 
-```markdown
-$$
-T^* = \arg\min_{R \in SO(3),\, t \in \mathbb{R}^3}
-      \sum_{i=1}^{n} \| R\,p_i + t - q_{\sigma(i)} \|^2
-$$
-<!-- label: eq:p2p-objective -->
+**必须包含：**
+- 图：`fig:icp-pipeline`
+- 两个带标签的数学环境（P2P 目标函数、P2Plane 目标函数）
+- 一个定理环境（`<!-- label: thm:convergence -->`）
 
-$$
-T^* = \arg\min_{R,\,t}
-      \sum_{i=1}^{n} \bigl[(R\,p_i + t - q_{\sigma(i)}) \cdot \hat{n}_i\bigr]^2
-$$
-<!-- label: eq:p2plane-objective -->
-```
-
-**Step 1:** Write the fragment. Theorem block:
-
-```markdown
-<!-- begin: theorem -->
-**Besl's Convergence Theorem.**
-ICP with point-to-point correspondence monotonically decreases the
-objective $E(T)$ at each iteration and converges to a fixed point
-in a finite number of steps.
-<!-- end: theorem -->
-<!-- label: thm:convergence -->
-```
-
-**Step 2:** Banned phrase check (same grep command as Task 2.1).
-
-**Step 3:** Commit with `feat(ch2)`.
+**写完后：** 禁用词检查，提交 `feat(ch2)`。
 
 ---
 
-### Task 2.3: Chapter 3 — Algorithm Variants
+### 第 3 章：Algorithm Variants
 
-**File:** `examples/icp-survey/ch3-variants.mid.md`
+**文件：** `examples/icp-survey/ch3-variants.mid.md`
 
-**This is the longest chapter. Write all 6 subsections.**
+**章节标签：** `<!-- label: sec:variants -->`
 
-**Content requirements per subsection:**
+这是最长的章节，包含 6 个小节和 1 个章节总结。
 
-**§3.1 Correspondence Strategy**
-- Table with 6 rows (from outline): cite each method
-- Bidirectional consistency discussion with equation: reject pair if $\|p_i - q_i\| > d_{\max}$
-- "Picky ICP" paragraph citing Rusinkiewicz 2001
+**§3.1 Correspondence Strategy**（`<!-- label: sec:correspondence -->`）
+- 6 种对应策略的比较（读论文后确定内容）
+- 双向一致性检验的公式（阈值 $d_{\max}$，标 `<!-- label: eq:bidirectional -->`）
+- 比较表：列 Method / 特点 / 计算开销（内容读论文后填）
 
-**§3.2 Outlier Handling**
-- M-estimator weight formula for Huber loss
-- TrICP: define overlap ratio $\rho$ explicitly
-- Comparison table: method vs. max outlier rate tolerated vs. computational overhead
+**§3.2 Outlier Handling**（`<!-- label: sec:outlier -->`）
+- M-estimator 权重公式（Huber loss）
+- TrICP 重叠率 $\rho$ 的定义
+- 比较表：列 Method / 最大异常值率 / 相对开销 / 是否全局最优（内容读论文后填）
 
-| Method | Max Outlier Rate | Overhead vs. Vanilla ICP | Global Optimal? |
-|--------|-----------------|--------------------------|----------------|
-| Vanilla ICP | ~10% | 1× | No |
-| TrICP | ~70% | 1.2× | No |
-| RICP (Huber) | ~40% | 1.1× | No |
-| Go-ICP | ~50% | 10³–10⁴× | Yes |
-| RANSAC+ICP | ~80% | 5–50× | Probabilistic |
-| DICP | dynamic objects | 1.0× (uses sensor data) | No |
-<!-- caption: Outlier handling methods: tolerance and computational cost. -->
-<!-- label: tab:outlier-comparison -->
+**§3.3 Convergence Acceleration**（`<!-- label: sec:convergence-accel -->`）
+- AA-ICP：Anderson 加速原理（历史窗口 $m$）
+- VICP：速度场预测
+- 图：`fig:convergence`（P2P vs P2Plane vs AA-ICP 收敛曲线）
 
-**§3.3 Convergence Acceleration**
-- AA-ICP: cite Anderson 1965 for the underlying theory; explain $m$-step history window
-- VICP: explain velocity field equation
-- Figure: `fig:convergence` — convergence curves of P2P vs P2Plane vs AA-ICP
+**§3.4 Transformation Estimation**（`<!-- label: sec:transform -->`）
+- Kabsch SVD 推导（公式简述，2 个方程）
+- 对偶四元数表示
+- SE(3) vs Sim(3) 适用场景对比（用一个表或简短段落）
 
-**§3.4 Transformation Estimation**
-- Kabsch SVD derivation sketch (2 equations)
-- Dual Quaternion: compact representation $\hat{q} = q_r + \epsilon q_d$
-- Comparison: SE(3) vs Sim(3) applicability table
+**§3.5 Global Initialization**（`<!-- label: sec:global-init -->`）
+- 两阶段流程（文字描述，不用图）
+- FPFH 描述子 + RANSAC 参数讨论
+- FGR vs RANSAC 的成本函数比较
+- Go-ICP 的分支定界策略
 
-**§3.5 Global Initialization**
-- Two-stage pipeline diagram (text description, not figure)
-- FPFH descriptor bin count, RANSAC inlier threshold discussion
-- FGR cost function vs RANSAC probabilistic model
+**§3.6 Deep Learning Methods**（`<!-- label: sec:dl -->`）
+- 图：`fig:dl-taxonomy`
+- 各类方法（基于特征匹配、端到端、混合）各 1–2 段
+- 方法比较表：列 Method / 类别 / 骨干 / 数据集 / 是否需要法向量（内容读论文后填）
+- 末尾自然过渡到硬件加速章节（用数据说明为何需要硬件）
 
-**§3.6 Deep Learning Methods**
-- Figure: `fig:dl-taxonomy`
-- End with the 6-row comparison table from the outline (add `<!-- caption -->` and `<!-- label -->`)
-- Explicit transition connecting to hardware: "None of these methods achieve real-time throughput on CPU alone — hardware acceleration, covered in [Section 5](ref:sec:hardware), addresses this gap."
+**§3.7 Chapter Summary**（`<!-- label: sec:variants-summary -->`）
+- 各变体类别与其解决挑战的对应关系
+- DL 方法相对经典方法的优劣
+- 变体设计的开放问题
 
-**Section summary (required at end of ch3):**
-
-```markdown
-### 3.7 Chapter Summary
-<!-- label: sec:variants-summary -->
-
-[2–3 paragraphs covering: which variant class best addresses which
-challenge, where DL methods outperform classical, open problems
-in variant design. Cite specific numbers from papers. No banned phrases.]
-```
-
-**Steps:**
-1. Write full fragment (~1500–2000 words expected).
-2. Banned phrase check.
-3. Verify every table has `<!-- caption -->` and `<!-- label -->`.
-4. Verify every citation uses `[text](cite:key)` format.
-5. Commit: `feat(ch3): algorithm variants chapter`.
+**写完后：** 禁用词检查、所有表格有 `<!-- caption -->` 和 `<!-- label -->`、所有引用用 `[text](cite:key)` 格式，提交 `feat(ch3)`。
 
 ---
 
-### Task 2.4: Chapter 4 — Software-Level Acceleration
+### 第 4 章：Software-Level Acceleration
 
-**File:** `examples/icp-survey/ch4-software.mid.md`
+**文件：** `examples/icp-survey/ch4-software.mid.md`
 
-**Content requirements:**
-- §4.1 Data structures: KD-tree $O(\log n)$ average query, voxel hash $O(1)$ amortized
-- §4.2 Downsampling: voxel grid formula $\text{voxel size} = d_{\max} / N_{\text{target}}^{1/3}$
-- §4.3 Parallelism: Amdahl's law applied to ICP (KNN is ~75% serial bottleneck)
-- §4.4 Convergence acceleration: Anderson mixing depth $m$, quasi-Newton BFGS memory
-- Comparison table:
+**章节标签：** `<!-- label: sec:software -->`
 
-| Technique | Targets | Speedup | Accuracy Impact |
-|-----------|---------|---------|----------------|
-| KD-Tree | KNN search | 10–100× vs brute force | None |
-| Voxel downsample | Point count | 2–10× (fewer points) | Minor (voxel size dependent) |
-| OpenMP KNN | KNN search | 4–8× (CPU cores) | None |
-| Anderson Acc. (m=5) | Iterations | 2–3× fewer iters | None |
-| Approx. KNN (ε=0.1) | KNN search | 1.5–3× | <0.5% RMSE increase |
-<!-- caption: Software acceleration techniques and their characteristics. -->
-<!-- label: tab:sw-acceleration -->
+**内容结构：**
 
-- Section summary paragraph at end.
+**§4.1 数据结构**（`<!-- label: sec:data-structures -->`）
+- KD-Tree 平均查询复杂度与适用场景（读论文）
+- 体素哈希表的均摊复杂度与优势
+- 两者对比：适用规模、内存占用、GPU 友好性
 
-**Steps:** Write, banned-phrase check, commit `feat(ch4)`.
+**§4.2 降采样**（`<!-- label: sec:downsampling -->`）
+- 体素网格降采样的参数选择
+- 精度与速度的权衡（数据从论文里读）
 
----
+**§4.3 并行化**（`<!-- label: sec:parallelism -->`）
+- ICP 中 KNN 搜索的串行瓶颈分析（引用具体测量论文）
+- OpenMP / CUDA 并行策略
 
-### Task 2.5: Chapter 5 — Hardware Acceleration
+**§4.4 近似 KNN**（`<!-- label: sec:approx-knn -->`）
+- 近似精度参数 $\varepsilon$ 的定义和影响
+- 精度损失与加速比的权衡
 
-**File:** `examples/icp-survey/ch5-hardware.mid.md`
+**比较表：** 列 Technique / 针对阶段 / 加速比 / 精度影响（内容读论文后填）
 
-**Content requirements (this is the expanded chapter):**
+**章节小结段落**
 
-**§5.1 Motivation**
-- Profiling data: KNN search > 70% of ICP runtime on CPU (cite specific paper measuring this)
-- Real-time requirements table:
-
-| Application | Required Throughput | Point Cloud Size | Latency Budget |
-|-------------|-------------------|------------------|---------------|
-| Autonomous driving (10 Hz scan) | 10 scans/s | 100K–200K pts | 100 ms |
-| Robot arm grasping | 5–10 Hz | 20K–50K pts | 100–200 ms |
-| Drone SLAM | 20–30 Hz | 10K–30K pts | 33–50 ms |
-| Industrial inspection | offline/1 Hz | 1M–10M pts | 1 s |
-<!-- caption: Real-time requirements for ICP across applications. -->
-<!-- label: tab:realtime-requirements -->
-
-**§5.2 GPU Acceleration**
-- SIMT model explanation, warp-level KNN parallelism
-- Voxel-based GPU KNN (TACO 2025): key architectural insight, measured speedup vs CPU
-- Kernel launch overhead analysis: when GPU is slower than CPU (small point clouds < 5K pts)
-- Figure: none (GPU section relies on the hw-comparison figure in §5.5)
-
-**§5.3 FPGA Acceleration**
-- §5.3.1 Design methodology: streaming pipeline concept, BRAM budget calculation example
-- §5.3.2 Accelerator comparison table (6 papers with full details):
-
-<!-- begin: raw -->
-\begin{table}[htbp]
-\centering
-\caption{Comparison of FPGA-based point cloud registration accelerators.}
-\label{tab:fpga-comparison}
-\begin{tabular}{@{}lllllll@{}}
-\toprule
-Work & Platform & Search & Application & Frequency & Power & Published \\
-\midrule
-SoC-FPGA ICP \cite{socfpga2020} & Zynq UltraScale+ & KD-Tree & Industrial robot & -- & -- & TIE 2020 \\
-NDT FPGA \cite{ndtfpga2021} & Xilinx & NDT & AV localization & -- & $<$ GPU & TCAS-II 2021 \\
-HA-BFNN-ICP \cite{habfnn2025} & FPGA & BFNN & LiDAR mapping & -- & -- & TCAS-I 2025 \\
-Sun et al. \cite{sun2025fpga} & FPGA & Multi-mode & SLAM & -- & -- & 2025 \\
-Multi-Mode \cite{multimode2025} & Xilinx & Configurable & SLAM/localize & -- & -- & TRTS 2025 \\
-FPGA-PointNet \cite{fpgapointnet2025} & FPGA & DL feature & Registration & -- & -- & TRTS 2025 \\
-\bottomrule
-\end{tabular}
-\end{table}
-<!-- end: raw -->
-
-- §5.3.3 BFNN vs KD-Tree on FPGA: regularity advantage vs search efficiency trade-off
-
-**§5.4 Custom Processors**
-- Tigris (MICRO 2019): parallel KD-Tree traversal engine, reported 2.9× energy efficiency vs GPU
-- Tartan (ISCA 2024): memory-bandwidth analysis for ICP, roofline model positioning
-- Both deserve 1 dedicated paragraph each with specific reported numbers
-
-**§5.4.2 PIM**
-- PICK (DAC 2025): bit-line computing mechanism, how it eliminates DRAM-CPU bandwidth
-- Theoretical peak bandwidth vs. measured KNN throughput
-- Limitation: fixed function — cannot run general ICP pipeline
-
-**§5.5 SW/HW Co-design**
-- Figure: `fig:hw-comparison` (grouped bar chart: latency + power per platform)
-- Figure: `fig:codesign-space` (2D scatter: latency vs power, Pareto frontier)
-- Quantization error propagation: 1-paragraph mathematical argument (INT16 → ~0.002° rotation error)
-- Final comparison table (5-row, from outline) with `<!-- caption -->` and `<!-- label -->`
-
-**§5.6 Chapter Summary**
-- 3-paragraph comparative summary: GPU vs FPGA vs custom, open research questions
-- Cite 4–5 specific papers with numbers
-
-**Steps:**
-1. Write full fragment (~2000–2500 words expected).
-2. Fill in actual measured numbers from bibtex metadata where available (call `mcp__drflow__get_paper_summary` if needed).
-3. Banned phrase check.
-4. Verify all raw LaTeX tables are syntactically correct.
-5. Commit: `feat(ch5): hardware acceleration chapter`.
+**写完后：** 禁用词检查，提交 `feat(ch4)`。
 
 ---
 
-### Task 2.6: Chapter 6 — Applications and Benchmarks
+### 第 5 章：Hardware Acceleration
 
-**File:** `examples/icp-survey/ch6-benchmarks.mid.md`
+**文件：** `examples/icp-survey/ch5-hardware.mid.md`
 
-**Content requirements:**
+**章节标签：** `<!-- label: sec:hardware -->`
 
-**§6.1 Applications** — four application paragraphs, each with:
-- Specific ICP variant used in practice
-- Latency / accuracy requirement
-- Representative system citation
+这是内容最丰富的章节，需要充分展开。
 
-**§6.2 Datasets**
+**§5.1 Motivation**（`<!-- label: sec:hw-motivation -->`）
+- KNN 搜索在 ICP 中的运行时占比（引用论文测量数据）
+- 各应用场景的实时性需求表：列 Application / 吞吐量 / 点云规模 / 延迟预算（内容读论文后填）
 
-| Dataset | Type | # Scans | Points/Scan | Ground Truth | Common Use |
-|---------|------|---------|-------------|--------------|-----------|
-| Stanford Bunny | Synthetic | 10 | 40K | Optical tracker | Algorithm dev |
-| ETH (ASL) | Outdoor LiDAR | 45 | 110K | GNSS/IMU | Outdoor SLAM |
-| KITTI Odometry | Driving LiDAR | 43 seq | 120K | GNSS+IMU | AV localization |
-| 3DMatch | Indoor RGB-D | 62 scenes | 5K | Depth sensor | DL registration |
-| nuScenes | AV multi-sensor | 1000 scenes | 30K | GPS+IMU | Full-stack AV |
-<!-- caption: Commonly used datasets for point cloud registration evaluation. -->
-<!-- label: tab:datasets -->
+**§5.2 GPU Acceleration**（`<!-- label: sec:gpu -->`）
+- SIMT 模型与 warp 级 KNN 并行
+- 体素化 GPU KNN（TACO 2025）的架构特点与实测加速比（读论文）
+- Kernel launch 开销分析：何时 GPU 反而慢于 CPU（阈值从论文读）
 
-**§6.3 Evaluation metrics** — define RTE, RRE, Recall, Chamfer Distance, runtime. One equation each.
+**§5.3 FPGA Acceleration**（`<!-- label: sec:fpga -->`）
 
-**§6.4 Method comparison table** (large, use raw LaTeX for multicolumn):
+§5.3.1 设计方法论：流式流水线概念、BRAM 预算（读论文）
 
-<!-- begin: raw -->
-\begin{table}[htbp]
-\centering
-\caption{Quantitative comparison of representative ICP variants on ETH and KITTI.
-RTE: relative translation error (cm); RRE: relative rotation error (°);
-Time: per-frame on CPU unless noted.}
-\label{tab:method-comparison}
-\begin{tabular}{@{}lccccl@{}}
-\toprule
-Method & ETH RTE & ETH RRE & KITTI RTE & Time & Category \\
-\midrule
-ICP (P2P) \cite{Besl1992method} & 4.2 & 0.21 & 12.3 & 320 ms & Classic \\
-ICP (P2Plane) \cite{Chen1992object} & 2.8 & 0.14 & 8.1 & 380 ms & Classic \\
-NDT \cite{ndt} & 3.1 & 0.18 & 9.2 & 180 ms & Classic \\
-AA-ICP \cite{aaicp} & 2.9 & 0.15 & 8.4 & 200 ms & Accel. \\
-FGR+ICP \cite{fgr2016} & 2.1 & 0.11 & 6.3 & 150 ms & Global+Local \\
-DCP \cite{Wang2019dcp} & 3.5 & 0.22 & -- & 12 ms (GPU) & DL \\
-RPM-Net \cite{Yew2020rpm} & 2.6 & 0.14 & -- & 45 ms (GPU) & DL \\
-HA-BFNN \cite{habfnn2025} & -- & -- & -- & 8 ms (FPGA) & HW Accel. \\
-\bottomrule
-\end{tabular}
-\end{table}
-<!-- end: raw -->
+§5.3.2 FPGA 加速器对比表（用 raw LaTeX，以支持多列）：
+- 列：Work / Platform / Search Method / Application / 关键指标 / Published
+- 行：SoC-FPGA ICP、NDT FPGA、HA-BFNN-ICP、Sun et al.、Multi-Mode、FPGA-PointNet
+- 所有具体数值从论文读取后填入，不预填
 
-Note: fill actual numbers from drflow paper summaries. Use `--` where data not reported.
+§5.3.3 BFNN vs KD-Tree on FPGA：规则性优势 vs 搜索效率的权衡
 
-**Steps:** Write, banned-phrase check, verify all tables labeled, commit `feat(ch6)`.
+**§5.4 Custom Processors**（`<!-- label: sec:custom-proc -->`）
+- Tigris（MICRO 2019）：并行 KD-Tree 遍历引擎，能效与 GPU 对比（读论文）
+- Tartan（ISCA 2024）：ICP 内存带宽分析，roofline 模型定位（读论文）
+- 各一段，包含论文实测数字
 
----
+**§5.4.2 Processing-in-Memory**（`<!-- label: sec:pim -->`）
+- PICK（DAC 2025）：bit-line 计算机制，消除 DRAM-CPU 带宽瓶颈（读论文）
+- 峰值带宽 vs 实测 KNN 吞吐量
+- 局限性：固定功能，无法运行完整 ICP 流水线
 
-### Task 2.7: Chapters 7 & 8 — Future Directions and Conclusion
+**§5.5 SW/HW Co-design**（`<!-- label: sec:codesign -->`）
+- 图：`fig:hw-comparison`（各平台延迟与功耗对比）
+- 图：`fig:codesign-space`（延迟 vs 功耗 Pareto 前沿）
+- 量化误差传播分析（INT16 精度对旋转误差的影响，从论文读数据）
+- 综合比较表：列 Platform / 典型延迟 / 功耗 / 精度损失 / 可编程性（内容读论文后填）
 
-**File:** `examples/icp-survey/ch7-conclusion.mid.md`
+**§5.6 Chapter Summary**（`<!-- label: sec:hw-summary -->`）
+- GPU vs FPGA vs 定制处理器的横向比较
+- 未解决的开放问题
+- 引用 4–5 篇论文的具体数字
 
-**Content requirements:**
-
-**§7 Open Challenges and Future Directions** (NOT just a list — each point gets one substantive paragraph with specific technical content):
-
-1. **Real-time million-point processing** — current FPGA designs handle <500K pts; gap analysis
-2. **Dynamic scene robustness** — DICP uses Doppler but requires 4D LiDAR hardware; alternative: learned moving-object segmentation as pre-filter
-3. **Classical–DL co-design** — NAR-*ICP shows promise; open: training on cross-domain data without registration supervision
-4. **Unified SW/HW optimization** — no existing accelerator jointly optimizes all ICP stages; compiler-level co-optimization opportunity
-5. **Convergence theory for deep variants** — DCP, RPM-Net lack convergence guarantees; connection to optimal transport theory
-6. **Formal accuracy bounds under quantization** — INT8 ICP error bounds remain an open theoretical question
-
-**§8 Conclusion** — 2 paragraphs max. First: what ICP is and why it matters (concrete). Second: the three major axes (algorithmic, software, hardware) and where the field is heading. No "this paper provides a comprehensive overview" type filler.
-
-**Steps:**
-1. Write both chapters as one fragment.
-2. Banned phrase check — this chapter is most prone to AI patterns.
-3. Commit: `feat(ch7-8): future directions and conclusion`.
+**写完后：**
+- 禁用词检查
+- raw LaTeX 表格语法验证
+- 确认所有表/图有 caption 和 label
+- 提交 `feat(ch5)`
 
 ---
 
----
+### 第 6 章：Applications and Benchmarks
 
-### Task 2.8: Generate AI Figures (runs AFTER all Phase 2 chapter drafts)
+**文件：** `examples/icp-survey/ch6-benchmarks.mid.md`
 
-**Invoke the `generate-figures` skill** on the chapter fragments directory to produce all 8 PNG files.
+**章节标签：** `<!-- label: sec:benchmarks -->`
 
-**Step 1:** Run skill
+**§6.1 Applications**（`<!-- label: sec:applications -->`）
+- 四个应用场景各一段：自动驾驶、机械臂抓取、无人机 SLAM、工业检测
+- 每段包含：使用的 ICP 变体、精度/延迟要求、代表性系统引用（读论文）
 
-```
-Skill: generate-figures
-Args: examples/icp-survey/
-```
+**§6.2 Datasets**（`<!-- label: sec:datasets -->`）
+- 数据集比较表：列 Dataset / Type / 规模 / Ground Truth / 常见用途
+- 数据集：Stanford Bunny、ETH（ASL）、KITTI Odometry、3DMatch、nuScenes、ModelNet40
+- 具体扫描数、点数等从论文/数据集文档读取后填
 
-The skill scans `.mid.md` files for `<!-- ai-generated: true -->` + `<!-- ai-prompt: ... -->` directives and generates the corresponding image files.
+**§6.3 Evaluation Metrics**（`<!-- label: sec:metrics -->`）
+- 定义 RTE、RRE、Recall、Chamfer Distance、runtime（各一个公式，标签）
 
-**Step 2:** Verify all 8 images exist
+**§6.4 Method Comparison**（`<!-- label: sec:comparison -->`）
+- 大型对比表（raw LaTeX，支持多列）：列 Method / ETH RTE / ETH RRE / KITTI RTE / Time / Category
+- 覆盖：P2P ICP、P2Plane ICP、NDT、AA-ICP、FGR+ICP、DCP、RPM-Net、HA-BFNN 等
+- 所有数值从论文（`mcp__drflow__get_paper_summary`）读取后填，不可用的标 `--`
 
-```bash
-for f in icp-pipeline icp-taxonomy convergence-curves icp-timeline \
-          dl-registration fpga-pipeline hw-comparison codesign-space; do
-  [ -f "examples/images/${f}.png" ] && echo "OK: ${f}.png" || echo "MISSING: ${f}.png"
-done
-```
-
-**Step 3:** If any images are missing, re-run the skill or generate the missing ones manually.
-
-**Step 4:** Commit
-
-```bash
-git add examples/images/
-git commit -m "feat: generate AI figures for ICP survey"
-```
+**写完后：** 禁用词检查，所有表格有 caption 和 label，提交 `feat(ch6)`。
 
 ---
 
-## Phase 3: Merge (sequential, after all Phase 2 tasks)
+### 第 7 章：Future Directions & Conclusion
 
-### Task 3.1: Collect final BibTeX keys
+**文件：** `examples/icp-survey/ch7-conclusion.mid.md`
 
-**Step 1:** List all citation keys used across chapter fragments
+**§7 Open Challenges and Future Directions**（`<!-- label: sec:future -->`）
 
-```bash
-grep -hE '\]\(cite:[^)]+\)' examples/icp-survey/ch*.mid.md | \
-  grep -oE 'cite:[^)]+' | sort -u
-```
+每个挑战写一段实质性内容（从论文读数据后展开），不只是列表：
 
-**Step 2:** Verify each key exists in `examples/icp.bib`
+1. **实时百万点处理** — 当前 FPGA/GPU 设计的规模上限（读论文），差距分析
+2. **动态场景鲁棒性** — DICP 的 Doppler 方案局限；预过滤替代方案
+3. **经典–深度学习协同** — NAR-\*ICP 的探索；跨域泛化的开放问题
+4. **统一 SW/HW 优化** — 现有加速器未联合优化全流程；编译器级协同机会
+5. **深度变体的收敛理论** — DCP/RPM-Net 缺乏收敛保证；与最优传输理论的联系
+6. **量化精度界** — INT8 ICP 的误差界作为开放理论问题
+
+**§8 Conclusion**（`<!-- label: sec:conclusion -->`）
+
+两段，不超过：
+- 第一段：ICP 是什么，为什么重要（具体陈述）
+- 第二段：三个主轴（算法、软件、硬件）的现状与走向
+
+**禁止：** "This paper provides a comprehensive overview…" 类句型。
+
+**写完后：** 本章最容易出现 AI 写作风格，禁用词检查必须严格执行，提交 `feat(ch7-8)`。
+
+---
+
+### Task 2.8：生成 AI 插图（在所有章节完成后）
+
+调用 `generate-figures` skill 扫描章节文件中的 `<!-- ai-generated: true -->` 和 `<!-- ai-prompt: ... -->` 指令，生成对应图片。
+
+验证所有 8 张图片存在后提交。
+
+---
+
+## Phase 3：合并与润色
+
+### Task 3.1：验证引用一致性
+
+检查所有章节中使用的 `cite:key` 是否都在 `icp.bib` 中存在，缺失的从 drflow 补充。
 
 ```bash
 for key in $(grep -hE '\]\(cite:[^)]+\)' examples/icp-survey/ch*.mid.md | \
@@ -658,67 +474,19 @@ for key in $(grep -hE '\]\(cite:[^)]+\)' examples/icp-survey/ch*.mid.md | \
 done
 ```
 
-Fix any missing keys by fetching from drflow.
+### Task 3.2：写文档头并合并
 
----
+创建 `examples/icp-survey.mid.md`，写文档头（documentclass、packages、title、author、abstract 等），再追加各章节片段。
 
-### Task 3.2: Write the merged document header
+文档头须包含：
+- `<!-- documentclass: article -->`（或 `ctexart` 如需中文）
+- `<!-- bibliography: icp.bib -->`
+- `<!-- bibstyle: IEEEtran -->`
+- `<!-- title: Iterative Closest Point: ... -->`
+- `<!-- abstract: | ... -->`（abstract 内容待章节写完后根据实际内容总结）
+- `<!-- preamble: | ... -->`（`\norm`、`\argmin`、`\KNN` 等宏定义）
 
-**File:** `examples/icp-survey.mid.md`
-
-Write the document header then concatenate all chapter fragments:
-
-```markdown
-<!-- documentclass: article -->
-<!-- classoptions: [12pt, a4paper] -->
-<!-- packages: [amsmath, graphicx, algorithm2e, booktabs, multirow, hyperref, cleveref, xcolor] -->
-<!-- package-options: {geometry: "margin=1in", cleveref: "nameinlink"} -->
-<!-- preset: en -->
-<!-- bibliography: icp.bib -->
-<!-- bibstyle: IEEEtran -->
-<!-- bibliography-mode: biber -->
-<!-- latex-mode: xelatex -->
-<!-- title: Iterative Closest Point: A Survey of Algorithms, Variants, and Hardware Acceleration -->
-<!-- author: [Author Names] -->
-<!-- date: 2026 -->
-<!-- abstract: |
-  Point cloud registration accuracy degrades by 3–10× when initial pose error
-  exceeds 15°. The Iterative Closest Point (ICP) algorithm, introduced
-  independently by Besl and McKay and by Chen and Medioni in 1992, remains the
-  dominant local registration baseline across robotics, autonomous driving, and
-  medical imaging. Thirty years of research have produced hundreds of variants
-  targeting three core weaknesses: sensitivity to initialization, outlier
-  contamination, and computational cost. This survey organizes that work across
-  three axes — algorithmic variants (correspondence strategies, outlier
-  handling, convergence acceleration, deep learning integration), software
-  optimization (data structures, parallelism, approximate search), and hardware
-  acceleration (GPU pipelines, FPGA streaming architectures, custom processors,
-  processing-in-memory). Thirty representative methods are compared
-  quantitatively on ETH, KITTI, ModelNet40, and 3DMatch benchmarks.
-  The latency–power–accuracy trade-off across CPU, GPU, FPGA, ASIC, and PIM
-  implementations is analyzed using a unified Pareto framework. Open problems
-  in million-point real-time processing, dynamic scene robustness, and
-  compiler-level SW/HW co-optimization are identified.
--->
-<!-- preamble: |
-  \newcommand{\norm}[1]{\left\| #1 \right\|}
-  \DeclareMathOperator{\argmin}{arg\,min}
-  \DeclareMathOperator{\KNN}{KNN}
--->
-```
-
-**Step 1:** Write header to file (use `>` to overwrite, not append):
-
-```bash
-cat > examples/icp-survey.mid.md << 'HEADER'
-<!-- documentclass: article -->
-...
-HEADER
-```
-
-Or use the Write tool to create the file with the full header block above.
-
-**Step 2:** Append chapter fragments in order (use `>>` for all chapters):
+合并脚本：
 
 ```bash
 for ch in ch1-intro ch2-background ch3-variants ch4-software \
@@ -728,121 +496,47 @@ for ch in ch1-intro ch2-background ch3-variants ch4-software \
 done
 ```
 
-**Step 3:** Verify no duplicate section labels
+检查重复标签：
 
 ```bash
 grep "<!-- label:" examples/icp-survey.mid.md | sort | uniq -d
 ```
 
-Fix any duplicates.
+### Task 3.3：反 AI 润色
 
----
-
-### Task 3.3: Final anti-AI polish pass
-
-**File:** `examples/icp-survey.mid.md`
-
-**Step 1:** Run the banned phrase check on the merged file
+在合并后的文档上运行禁用词检查：
 
 ```bash
 grep -inE "furthermore|moreover|it is worth|it should be noted|this (section|paper|survey) (presents|discusses|examines|reviews|provides)|comprehensive|crucial role|pivotal role|significant role|state-of-the-art|in conclusion,|to summarize,|in summary," examples/icp-survey.mid.md
 ```
 
-**Step 2:** For every match found, rewrite the sentence:
-- Replace connective openers with a technical claim
-- Replace "plays a crucial role" with what it actually does and a number
-- Replace "state-of-the-art" with "[Year method] achieves X on Y dataset"
+每处命中均需改写：
+- 把连接词开头改为技术断言
+- 把 "plays a crucial role" 改为具体作用 + 数字
+- 把 "state-of-the-art" 改为 "[年份方法] achieves X on Y dataset"
 
-**Step 3:** Check sentence length variety — find paragraphs with all long sentences
-
-```bash
-python3 -c "
-import re, sys
-text = open('examples/icp-survey.mid.md').read()
-paragraphs = [p.strip() for p in text.split('\n\n') if len(p.strip()) > 100 and not p.strip().startswith('#') and not p.strip().startswith('<!--')]
-for i, p in enumerate(paragraphs):
-    sents = re.split(r'(?<=[.!?])\s+', p)
-    lens = [len(s.split()) for s in sents if s]
-    if lens and min(lens) > 15:
-        print(f'Para {i}: all long sentences (min={min(lens)} words) — needs a short sentence')
-"
-```
-
-Fix any flagged paragraphs by splitting or inserting a short declarative sentence.
-
-**Step 4:** Final commit
-
-```bash
-git add examples/icp-survey.mid.md examples/icp.bib examples/images/
-git commit -m "feat: complete ICP survey draft in wenqiao mid.md format"
-```
+检查句子长度多样性（每段应有 ≥ 1 句 8 词以内短句），修正后提交。
 
 ---
 
-## Phase 4: Verification
+## Phase 4：验证
 
-### Task 4.1: Validate wenqiao format
-
-**Step 1:** Run the wenqiao converter (dry-run / lint mode if available)
-
-```bash
-uv run python -m wenqiao examples/icp-survey.mid.md --target latex --dry-run 2>&1 | head -50
-```
-
-Or attempt full conversion:
+运行 wenqiao 转换器检查格式：
 
 ```bash
 uv run python -m wenqiao examples/icp-survey.mid.md --target latex -o /tmp/icp-survey.tex
-```
-
-**Step 2:** Check for citation and label errors in output
-
-```bash
 grep -E "\\\\cite\{MISSING|undefined" /tmp/icp-survey.tex || echo "OK: no missing citations"
 ```
 
-**Step 3:** If errors found, fix the source `.mid.md` and re-run.
+发现错误则修复源文件后重跑。
 
 ---
 
-## Execution Approach
+## 执行方式
 
-**Recommended: Subagent-Driven (this session)**
+Phase 1（BibTeX）和 Phase 2（章节写作）均为高度并行任务：
+- Phase 1：5 个子 agent 同时执行 Task 1.A–1.E
+- Phase 2：7 个子 agent 同时执行各章写作
 
-Because Phase 1 (BibTeX) and Phase 2 (chapters) are both massively parallel, dispatch:
-
-- 5 subagents for Phase 1 (Tasks 1.A–1.E) simultaneously
-- 7 subagents for Phase 2 (Tasks 2.1–2.7) simultaneously after bibtex is complete
-
-Each subagent gets its task number and the full wenqiao format rules (see wenqiao-writer skill).
-
-**Handoff instructions for each chapter subagent:**
-> "Write `examples/icp-survey/chN-*.mid.md` as a wenqiao `.mid.md` fragment (no document header). Consult the anti-AI writing rules section of the plan. Use `[text](cite:key)` for citations. BibTeX keys are already in `examples/icp.bib`. Put figures in `examples/images/` with `ai-generated: true` directives."
-
----
-
-## File Checklist
-
-```
-examples/
-├── icp.bib                         ← all BibTeX entries
-├── icp-survey-outline.md           ← source outline (already exists)
-├── icp-survey.mid.md               ← FINAL merged document
-├── icp-survey/
-│   ├── ch1-intro.mid.md
-│   ├── ch2-background.mid.md
-│   ├── ch3-variants.mid.md
-│   ├── ch4-software.mid.md
-│   ├── ch5-hardware.mid.md
-│   ├── ch6-benchmarks.mid.md
-│   └── ch7-conclusion.mid.md
-└── images/
-    ├── icp-pipeline.png            ← fig:icp-pipeline
-    ├── icp-taxonomy.png            ← fig:taxonomy
-    ├── convergence-curves.png      ← fig:convergence
-    ├── icp-timeline.png            ← fig:timeline
-    ├── dl-registration.png         ← fig:dl-taxonomy
-    ├── fpga-pipeline.png           ← fig:fpga-pipeline
-    ├── hw-comparison.png           ← fig:hw-comparison
-    └── codesign-space.png          ← fig:codesign-space
-```
+每个章节子 agent 的交接说明：
+> "写 `examples/icp-survey/chN-*.mid.md`，wenqiao `.mid.md` 片段格式（无文档头），直接从 `## N. 标题` 开始。遵守反 AI 写作规则。正文用 `[text](cite:key)` 引用，BibTeX key 已在 `examples/icp.bib`。图片放 `examples/images/`，标注 `ai-generated: true`，ai-prompt 在执行时根据上下文现写（英文，中文标签用 `""` 包裹）。所有数值从 drflow 读论文后填写，不预填。"
