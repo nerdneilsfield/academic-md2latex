@@ -41,6 +41,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/wenqiao"]
 
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "LICENSE", "README.md", "README_ZH.md"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
