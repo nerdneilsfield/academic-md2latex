@@ -11,6 +11,9 @@ dependencies = [
     "click>=8.0",
 ]
 
+[project.optional-dependencies]
+figures = ["openai>=1.0"]
+
 [project.scripts]
 md-mid = "md_mid.cli:cli"
 
