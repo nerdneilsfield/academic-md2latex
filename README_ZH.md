@@ -115,11 +115,20 @@ uv sync
 # Markdown → LaTeX（默认）
 md-mid paper.mid.md -o paper.tex
 
+# 显式 convert 子命令（与上一行等价）
+md-mid convert paper.mid.md -o paper.tex
+
 # Markdown → HTML（带 MathJax）
 md-mid paper.mid.md -o paper.html -t html
 
 # Markdown → 富 Markdown
 md-mid paper.mid.md -o paper.md -t markdown
+
+# 验证引用、交叉引用和图片
+md-mid validate paper.mid.md --bib refs.bib --strict
+
+# 检查格式化状态（未格式化时退出码 1）
+md-mid format paper.mid.md --check --diff
 
 # 从标准输入读取，仅正文模式
 cat paper.mid.md | md-mid - --mode body -o paper.tex
@@ -131,8 +140,21 @@ md-mid paper.mid.md --dump-east | jq .
 <details>
 <summary><b>完整 CLI 参考</b></summary>
 
+md-mid 使用子命令：`convert`（默认）、`validate` 和 `format`。
+`convert` 子命令是隐式的 —— `md-mid file.mid.md` 等同于 `md-mid convert file.mid.md`。
+
 ```
-用法: md-mid [OPTIONS] INPUT
+用法: md-mid [OPTIONS] COMMAND [ARGS]...
+
+子命令:
+  convert   转换学术 Markdown 为 LaTeX/Markdown/HTML（默认）
+  validate  验证引用、交叉引用和图片完整性
+  format    规范化学术 Markdown 格式
+```
+
+**convert**（默认）:
+```
+用法: md-mid convert [OPTIONS] INPUT
 
 选项:
   -o, --output PATH                   输出文件（省略则输出到 stdout）
@@ -151,7 +173,28 @@ md-mid paper.mid.md --dump-east | jq .
   --strict                            严格解析模式
   --verbose                           详细输出
   --dump-east                         导出增强 AST 为 JSON
-  --version                           显示版本号
+```
+
+**validate**:
+```
+用法: md-mid validate [OPTIONS] INPUT
+
+选项:
+  --bib PATH       用于验证引用的 BibTeX 文件
+  --config PATH    外部配置文件（md-mid.yaml）
+  --template PATH  LaTeX 模板文件（.yaml）
+  --strict         有警告时以退出码 1 退出
+  --verbose        显示全部诊断信息
+```
+
+**format**:
+```
+用法: md-mid format [OPTIONS] INPUT
+
+选项:
+  -o, --output PATH  输出路径（默认: 覆盖输入文件）
+  --check            仅检查，未格式化时退出码 1
+  --diff             显示统一差异
 ```
 
 </details>

@@ -116,11 +116,20 @@ uv sync
 # Markdown → LaTeX (default)
 md-mid paper.mid.md -o paper.tex
 
+# Explicit convert subcommand (same as above)
+md-mid convert paper.mid.md -o paper.tex
+
 # Markdown → HTML with MathJax
 md-mid paper.mid.md -o paper.html -t html
 
 # Markdown → Rich Markdown
 md-mid paper.mid.md -o paper.md -t markdown
+
+# Validate citations, cross-references, and images
+md-mid validate paper.mid.md --bib refs.bib --strict
+
+# Check formatting (exit 1 if unformatted)
+md-mid format paper.mid.md --check --diff
 
 # Read from stdin, body-only mode
 cat paper.mid.md | md-mid - --mode body -o paper.tex
@@ -132,8 +141,22 @@ md-mid paper.mid.md --dump-east | jq .
 <details>
 <summary><b>Full CLI Reference</b></summary>
 
+md-mid uses subcommands: `convert` (default), `validate`, and `format`.
+The `convert` subcommand is implicit — `md-mid file.mid.md` is equivalent to
+`md-mid convert file.mid.md`.
+
 ```
-Usage: md-mid [OPTIONS] INPUT
+Usage: md-mid [OPTIONS] COMMAND [ARGS]...
+
+Commands:
+  convert   Convert academic Markdown to LaTeX/Markdown/HTML (default)
+  validate  Validate citations, cross-references, and images
+  format    Normalize academic Markdown formatting
+```
+
+**convert** (default):
+```
+Usage: md-mid convert [OPTIONS] INPUT
 
 Options:
   -o, --output PATH                   Output file (stdout if omitted)
@@ -152,7 +175,28 @@ Options:
   --strict                            Strict parsing mode
   --verbose                           Verbose output
   --dump-east                         Dump Enhanced AST as JSON
-  --version                           Show version
+```
+
+**validate**:
+```
+Usage: md-mid validate [OPTIONS] INPUT
+
+Options:
+  --bib PATH       BibTeX file for citation validation
+  --config PATH    External config file (md-mid.yaml)
+  --template PATH  LaTeX template file (.yaml)
+  --strict         Exit 1 on any diagnostic warnings
+  --verbose        Show all diagnostics
+```
+
+**format**:
+```
+Usage: md-mid format [OPTIONS] INPUT
+
+Options:
+  -o, --output PATH  Output path (default: overwrite input)
+  --check            Check only, exit 1 if unformatted
+  --diff             Show unified diff of changes
 ```
 
 </details>
