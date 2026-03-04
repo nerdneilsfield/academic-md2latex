@@ -114,10 +114,12 @@ def convert(
         ValueError: If target is not supported (目标格式不支持时)
         ValueError: If preset is not a known preset name (预设名称无效时)
     """
-    # Validate preset early to give a clear error before any work starts (提前校验预设名)
-    if preset is not None and preset not in _PRESETS:
+    # Validate preset early — only when config is NOT a pre-built WenqiaoConfig,
+    # since the docstring guarantees preset is ignored in that case.
+    # (仅当 config 非预构建配置时提前校验预设名；预构建配置时 preset 被忽略，无需校验)
+    if preset is not None and not isinstance(config, WenqiaoConfig) and preset not in _PRESETS:
         raise ValueError(
-            f"Unknown preset {preset!r}; available: {list(_PRESETS)}"
+            f"unknown preset {preset!r}; available: {list(_PRESETS)}"
             f" (未知预设 {preset!r}；可用预设: {list(_PRESETS)})"
         )
 

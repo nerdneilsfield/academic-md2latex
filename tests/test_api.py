@@ -326,5 +326,22 @@ def test_preset_unknown_raises_early() -> None:
 
     from wenqiao.api import convert as api_convert
 
-    with pytest.raises(ValueError, match="Unknown preset"):
+    with pytest.raises(ValueError, match="unknown preset"):
         api_convert("# Hello\n", preset="nonexistent")
+
+
+def test_preset_ignored_when_prebuilt_config() -> None:
+    """Unknown preset is silently ignored when config is a pre-built WenqiaoConfig.
+
+    The docstring contract: "Ignored when config is a pre-built WenqiaoConfig."
+    Must NOT raise even if preset is unknown.
+    (当 config 为预构建配置时，preset 参数应被忽略，即使预设名无效也不应报错。)
+    """
+    from wenqiao.api import convert as api_convert
+    from wenqiao.config import WenqiaoConfig
+
+    cfg = WenqiaoConfig()
+    # Should not raise — preset is irrelevant when a pre-built config is provided
+    # (不应抛出异常，预构建配置下 preset 无意义)
+    result = api_convert("# Hello\n", config=cfg, preset="nonexistent-preset")
+    assert result is not None
