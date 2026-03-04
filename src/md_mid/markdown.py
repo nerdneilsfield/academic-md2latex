@@ -7,22 +7,19 @@
 
 from __future__ import annotations
 
-import html as _html
 from dataclasses import dataclass, field
 from typing import cast
 
 from md_mid.diagnostic import DiagCollector, Position
+from md_mid.markdown_blocks import MarkdownBlockMixin, _esc
 from md_mid.nodes import (
     Citation,
     CodeBlock,
     CodeInline,
     CrossRef,
     Document,
-    Emphasis,
-    Figure,
     FootnoteDef,
     FootnoteRef,
-    HardBreak,
     Heading,
     Image,
     Link,
@@ -32,16 +29,8 @@ from md_mid.nodes import (
     Node,
     Paragraph,
     RawBlock,
-    SoftBreak,
-    Strong,
-    Table,
     Text,
 )
-
-
-def _esc(text: str) -> str:
-    """Escape HTML special characters for attributes and content (HTML 特殊字符转义)."""
-    return _html.escape(text, quote=True)
 
 
 def _yaml_safe_scalar(val: str) -> str:
@@ -78,7 +67,7 @@ _LABEL_STRINGS: dict[str, dict[str, str]] = {
 }
 
 
-class MarkdownRenderer:
+class MarkdownRenderer(MarkdownBlockMixin):
     """EAST → Rich Markdown 渲染器 (EAST to Rich Markdown renderer)."""
 
     def __init__(
@@ -304,95 +293,10 @@ class MarkdownRenderer:
         anchor = f'<a id="{_esc(label)}"></a>\n' if label else ""
         return f"{anchor}$$\n{m.content}\n$$\n\n"
 
-    def _render_figure(self, node: Node) -> str:
-        """Figure 节点渲染 (Figure node rendering)."""
-        f = cast(Figure, node)
-        return self._render_figure_block(f.src, f.alt, f.metadata) + "\n\n"
-
     def _render_image(self, node: Node) -> str:
         """普通行内图片渲染 (Plain inline image rendering)."""
         img = cast(Image, node)
         return f"![{img.alt}]({img.src})"
-
-    def _render_image_as_figure(self, img: Image) -> str:
-        """Image 节点 → HTML figure 块 (Image as HTML figure block)."""
-        return self._render_figure_block(img.src, img.alt, img.metadata)
-
-    def _render_figure_block(
-        self,
-        src: str,
-        alt: str,
-        metadata: dict[str, object],
-    ) -> str:
-        """生成 HTML figure 块 (Generate HTML figure block)."""
-        self._fig_count += 1
-        n = self._fig_count
-        label = str(metadata.get("label", ""))
-        caption = str(metadata.get("caption", ""))
-        # Escape id attribute and img attributes (转义 id 属性和 img 属性)
-        id_attr = f' id="{_esc(label)}"' if label else ""
-        lines: list[str] = [
-            f"<figure{id_attr}>",
-            f'  <img src="{_esc(src)}" alt="{_esc(alt)}" style="max-width:100%">',
-        ]
-        fig_label = self._labels["figure"]
-        if caption:
-            lines.append(
-                f"  <figcaption><strong>{fig_label} {n}</strong>: {_esc(caption)}</figcaption>"
-            )
-        else:
-            lines.append(f"  <figcaption><strong>{fig_label} {n}</strong></figcaption>")
-
-        # AI 信息折叠块 (AI info details block)
-        ai = metadata.get("ai")
-        if isinstance(ai, dict):
-            from md_mid.ai_meta import render_ai_details_html
-
-            lines.extend(render_ai_details_html(ai, _esc, summary="\U0001f3a8 AI Generation Info"))
-
-        lines.append("</figure>")
-        return "\n".join(lines)
-
-    def _render_table(self, node: Node) -> str:
-        """表格 → HTML table + caption (Table as HTML table)."""
-        t = cast(Table, node)
-        self._tab_count += 1
-        n = self._tab_count
-        label = str(t.metadata.get("label", ""))
-        caption = str(t.metadata.get("caption", ""))
-        # Escape id attribute value (转义 id 属性值)
-        id_attr = f' id="{_esc(label)}"' if label else ""
-
-        # 表头 (Table headers) — render inline nodes as HTML
-        th_cells = "".join(f"<th>{self._render_cell_html(h)}</th>" for h in t.headers)
-        header_row = f"      <tr>{th_cells}</tr>"
-
-        # 数据行 (Data rows) — render inline nodes as HTML
-        data_rows: list[str] = []
-        for row in t.rows:
-            td_cells = "".join(f"<td>{self._render_cell_html(cell)}</td>" for cell in row)
-            data_rows.append(f"      <tr>{td_cells}</tr>")
-
-        lines: list[str] = [
-            f"<figure{id_attr}>",
-            "  <table>",
-            "    <thead>",
-            header_row,
-            "    </thead>",
-            "    <tbody>",
-            *data_rows,
-            "    </tbody>",
-            "  </table>",
-        ]
-        tab_label = self._labels["table"]
-        if caption:
-            lines.append(
-                f"  <figcaption><strong>{tab_label} {n}</strong>: {_esc(caption)}</figcaption>"
-            )
-        else:
-            lines.append(f"  <figcaption><strong>{tab_label} {n}</strong></figcaption>")
-        lines.append("</figure>")
-        return "\n".join(lines) + "\n\n"
 
     def _render_environment(self, node: Node) -> str:
         """环境节点渲染 (Environment: render children)."""
@@ -417,46 +321,6 @@ class MarkdownRenderer:
     def _render_thematic_break(self, node: Node) -> str:
         """分隔线渲染 (Thematic break rendering)."""
         return "---\n\n"
-
-    # ── Table cell HTML rendering ────────────────────────────────
-
-    def _render_cell_html(self, nodes: list[Node]) -> str:
-        """Render inline nodes as HTML for table cell content (表格单元格 HTML 渲染)."""
-        return "".join(self._render_node_html(n) for n in nodes)
-
-    def _render_node_html(self, node: Node) -> str:
-        """Render single inline node as HTML (单个行内节点 HTML 渲染)."""
-        if isinstance(node, Text):
-            return _esc(node.content)
-        if isinstance(node, Strong):
-            inner = self._render_cell_html(node.children)
-            return f"<strong>{inner}</strong>"
-        if isinstance(node, Emphasis):
-            inner = self._render_cell_html(node.children)
-            return f"<em>{inner}</em>"
-        if isinstance(node, CodeInline):
-            return f"<code>{_esc(node.content)}</code>"
-        if isinstance(node, MathInline):
-            return f"${_esc(node.content)}$"
-        if isinstance(node, Link):
-            text = self._render_cell_html(node.children)
-            # Block dangerous schemes in table cell links (阻止表格单元格中的危险 scheme)
-            from md_mid.url_check import is_unsafe_url
-
-            if is_unsafe_url(node.url):
-                return text
-            return f'<a href="{_esc(node.url)}">{text}</a>'
-        if isinstance(node, Citation):
-            refs = "".join(f"[^{key}]" for key in node.keys)
-            return f"{_esc(node.display_text)}{refs}" if node.display_text else refs
-        if isinstance(node, CrossRef):
-            return f'<a href="#{_esc(node.label)}">{_esc(node.display_text)}</a>'
-        if isinstance(node, SoftBreak):
-            return " "
-        if isinstance(node, HardBreak):
-            return "<br>"
-        # Fallback: render children (回退：渲染子节点)
-        return self._render_cell_html(node.children)
 
     # ── Inline nodes ─────────────────────────────────────────────
 
