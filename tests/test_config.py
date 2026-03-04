@@ -248,13 +248,18 @@ class TestPresets:
         cfg = resolve_config(preset_name="zh")
         assert cfg.documentclass == "ctexart"
         assert cfg.locale == "zh"
-        assert "hyperref" in cfg.packages
+        # Check a representative set from the comprehensive package list (检查核心宏包)
+        for pkg in ("amsmath", "amssymb", "graphicx", "hyperref", "listings", "booktabs"):
+            assert pkg in cfg.packages, f"expected {pkg!r} in zh preset packages"
 
     def test_en_preset_sets_locale_en(self) -> None:
         """en preset locale should be en (en 预设的 locale 应为 en)."""
         cfg = resolve_config(preset_name="en")
         assert cfg.locale == "en"
         assert cfg.documentclass == "article"
+        # en preset should also include comprehensive package list (en 预设同样包含完整宏包)
+        for pkg in ("amsmath", "amssymb", "graphicx", "hyperref", "listings", "booktabs"):
+            assert pkg in cfg.packages, f"expected {pkg!r} in en preset packages"
 
     def test_directive_overrides_preset(self) -> None:
         """Document directive overrides preset (文档指令应覆盖预设)."""

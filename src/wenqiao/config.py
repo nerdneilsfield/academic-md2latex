@@ -56,19 +56,35 @@ _DEFAULTS: dict[str, object] = {
 }
 
 
+# Comprehensive package list shared by all presets (所有预设共享的完整宏包列表)
+# Covers: math, symbols, graphics, hyperlinks, colors, code blocks,
+# theorems, algorithms, and nice tables — the full wenqiao feature set.
+# (涵盖：数学、符号、图形、超链接、颜色、代码块、定理、算法、美化表格)
+_PRESET_PACKAGES = [
+    "amsmath",       # math environments (数学环境)
+    "amssymb",       # math symbols ∀ ∃ etc. (数学符号)
+    "graphicx",      # images (图片)
+    "hyperref",      # cross-references and hyperlinks (交叉引用与超链接)
+    "xcolor",        # colors used by hyperref (hyperref 需要的颜色支持)
+    "listings",      # code blocks / lstlisting (代码块)
+    "amsthm",        # theorem / lemma / proof environments (定理/引理/证明)
+    "algorithm2e",   # algorithm environments (算法环境)
+    "booktabs",      # professional table rules \toprule etc. (专业表格线)
+]
+
 # Built-in presets (内置预设字典)
 _PRESETS: dict[str, dict[str, object]] = {
     "zh": {
         "documentclass": "ctexart",
         "classoptions": ["12pt", "a4paper"],
-        "packages": ["amsmath", "graphicx", "hyperref"],
+        "packages": list(_PRESET_PACKAGES),
         "locale": "zh",
         "preamble": "% Compiled with XeLaTeX recommended (建议使用 XeLaTeX 编译)\n",
     },
     "en": {
         "documentclass": "article",
         "classoptions": ["12pt", "a4paper"],
-        "packages": ["amsmath", "graphicx", "hyperref"],
+        "packages": list(_PRESET_PACKAGES),
         "locale": "en",
     },
 }
