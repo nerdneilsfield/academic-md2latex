@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from md_mid.html import HTMLRenderer
-from md_mid.nodes import (
+from wenqiao.html import HTMLRenderer
+from wenqiao.nodes import (
     Blockquote,
     Citation,
     CodeBlock,
@@ -592,7 +592,7 @@ class TestHtmlUnknownNode:
         """Unknown node emits warning via DiagCollector (未知节点发出警告)."""
         from dataclasses import dataclass
 
-        from md_mid.diagnostic import DiagCollector, DiagLevel
+        from wenqiao.diagnostic import DiagCollector, DiagLevel
 
         @dataclass
         class _FakeNode(Node):

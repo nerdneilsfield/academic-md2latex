@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from md_mid.genfig import FigureJob, FigureRunner
-from md_mid.genfig_openai import (
+from wenqiao.genfig import FigureJob, FigureRunner
+from wenqiao.genfig_openai import (
     OpenAIFigureRunner,
     _dump_response,
     _extract_image_url,

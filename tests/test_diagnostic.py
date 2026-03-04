@@ -1,4 +1,4 @@
-from md_mid.diagnostic import DiagLevel, Diagnostic, Position
+from wenqiao.diagnostic import DiagLevel, Diagnostic, Position
 
 
 def test_create_warning():
@@ -22,7 +22,7 @@ def test_format_error_no_position():
 
 
 def test_collector():
-    from md_mid.diagnostic import DiagCollector
+    from wenqiao.diagnostic import DiagCollector
 
     dc = DiagCollector("test.md")
     dc.warning("bad thing", Position(line=1, column=1))
@@ -36,7 +36,7 @@ def test_collector():
 
 def test_diag_phase_timing():
     """phase() context manager records wall-clock timing (phase 上下文管理器记录计时)."""
-    from md_mid.diagnostic import DiagCollector
+    from wenqiao.diagnostic import DiagCollector
 
     dc = DiagCollector("test.md")
     with dc.phase("parse"):

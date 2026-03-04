@@ -1,5 +1,5 @@
-from md_mid.latex import LaTeXRenderer
-from md_mid.nodes import (
+from wenqiao.latex import LaTeXRenderer
+from wenqiao.nodes import (
     Blockquote,
     Citation,
     CodeBlock,
@@ -419,8 +419,8 @@ class TestTable:
 class TestDiagnostics:
     def test_unhandled_node_type_triggers_warning(self) -> None:
         """未处理节点类型触发 warning（Unhandled node type triggers warning）."""
-        from md_mid.diagnostic import DiagCollector
-        from md_mid.nodes import Node
+        from wenqiao.diagnostic import DiagCollector
+        from wenqiao.nodes import Node
 
         # 创建一个无法识别的节点类型（Create a node with unrecognized type）
         class UnknownNode(Node):
@@ -435,7 +435,7 @@ class TestDiagnostics:
 
     def test_known_node_type_no_warning(self) -> None:
         """已知节点类型不触发 warning（Known node type does not trigger warning）."""
-        from md_mid.diagnostic import DiagCollector
+        from wenqiao.diagnostic import DiagCollector
 
         dc = DiagCollector("test")
         renderer = LaTeXRenderer(diag=dc)

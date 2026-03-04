@@ -9,10 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from md_mid.config import MdMidConfig
-from md_mid.diagnostic import DiagCollector
-from md_mid.nodes import Document
-from md_mid.pipeline import (
+from wenqiao.config import WenqiaoConfig
+from wenqiao.diagnostic import DiagCollector
+from wenqiao.nodes import Document
+from wenqiao.pipeline import (
     build_config,
     create_renderer,
     inject_metadata,
@@ -47,14 +47,14 @@ def test_parse_and_process_with_directives() -> None:
 def test_build_config_defaults() -> None:
     """build_config with no overrides returns defaults (无覆盖返回默认配置)."""
     cfg = build_config({})
-    assert isinstance(cfg, MdMidConfig)
+    assert isinstance(cfg, WenqiaoConfig)
     assert cfg.mode == "full"
     assert cfg.target == "latex"
 
 
 def test_build_config_pre_built() -> None:
     """pre_built short-circuits config resolution (pre_built 直接返回)."""
-    pre = MdMidConfig(mode="body")
+    pre = WenqiaoConfig(mode="body")
     cfg = build_config({}, pre_built=pre)
     assert cfg is pre
 
@@ -82,7 +82,7 @@ def test_build_config_template_path(tmp_path: Path) -> None:
 def test_inject_metadata_latex() -> None:
     """LaTeX target injects 12 metadata keys (LaTeX 目标注入 12 个元数据键)."""
     doc = Document()
-    cfg = MdMidConfig(title="Test", documentclass="report")
+    cfg = WenqiaoConfig(title="Test", documentclass="report")
     inject_metadata(doc, cfg, "latex")
     assert doc.metadata["title"] == "Test"
     assert doc.metadata["documentclass"] == "report"
@@ -92,7 +92,7 @@ def test_inject_metadata_latex() -> None:
 def test_inject_metadata_html() -> None:
     """HTML target injects 4 metadata keys (HTML 目标注入 4 个元数据键)."""
     doc = Document()
-    cfg = MdMidConfig(title="Test", author="A")
+    cfg = WenqiaoConfig(title="Test", author="A")
     inject_metadata(doc, cfg, "html")
     assert doc.metadata["title"] == "Test"
     assert doc.metadata["author"] == "A"
@@ -102,7 +102,7 @@ def test_inject_metadata_html() -> None:
 def test_inject_metadata_markdown_noop() -> None:
     """Markdown target injects nothing (Markdown 目标不注入任何内容)."""
     doc = Document()
-    cfg = MdMidConfig(title="Test")
+    cfg = WenqiaoConfig(title="Test")
     inject_metadata(doc, cfg, "markdown")
     assert "title" not in doc.metadata
 
@@ -112,9 +112,9 @@ def test_inject_metadata_markdown_noop() -> None:
 
 def test_create_renderer_latex() -> None:
     """create_renderer returns LaTeXRenderer for 'latex' (返回 LaTeX 渲染器)."""
-    from md_mid.latex import LaTeXRenderer
+    from wenqiao.latex import LaTeXRenderer
 
-    cfg = MdMidConfig()
+    cfg = WenqiaoConfig()
     diag = DiagCollector("<test>")
     r = create_renderer("latex", cfg, {}, diag)
     assert isinstance(r, LaTeXRenderer)
@@ -122,9 +122,9 @@ def test_create_renderer_latex() -> None:
 
 def test_create_renderer_markdown() -> None:
     """create_renderer returns MarkdownRenderer for 'markdown' (返回 Markdown 渲染器)."""
-    from md_mid.markdown import MarkdownRenderer
+    from wenqiao.markdown import MarkdownRenderer
 
-    cfg = MdMidConfig()
+    cfg = WenqiaoConfig()
     diag = DiagCollector("<test>")
     r = create_renderer("markdown", cfg, {}, diag)
     assert isinstance(r, MarkdownRenderer)
@@ -132,9 +132,9 @@ def test_create_renderer_markdown() -> None:
 
 def test_create_renderer_html() -> None:
     """create_renderer returns HTMLRenderer for 'html' (返回 HTML 渲染器)."""
-    from md_mid.html import HTMLRenderer
+    from wenqiao.html import HTMLRenderer
 
-    cfg = MdMidConfig()
+    cfg = WenqiaoConfig()
     diag = DiagCollector("<test>")
     r = create_renderer("html", cfg, {}, diag)
     assert isinstance(r, HTMLRenderer)
@@ -142,7 +142,7 @@ def test_create_renderer_html() -> None:
 
 def test_create_renderer_invalid() -> None:
     """create_renderer raises ValueError for unknown target (未知目标抛出 ValueError)."""
-    cfg = MdMidConfig()
+    cfg = WenqiaoConfig()
     diag = DiagCollector("<test>")
     with pytest.raises(ValueError, match="Unsupported target"):
         create_renderer("pdf", cfg, {}, diag)

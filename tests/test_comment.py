@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from md_mid.comment import process_comments
-from md_mid.diagnostic import DiagCollector
-from md_mid.nodes import (
+from wenqiao.comment import process_comments
+from wenqiao.diagnostic import DiagCollector
+from wenqiao.nodes import (
     Environment,
     Heading,
     Image,
@@ -10,7 +10,7 @@ from md_mid.nodes import (
     RawBlock,
     Strong,
 )
-from md_mid.parser import parse
+from wenqiao.parser import parse
 
 
 def test_document_level_directives():

@@ -9,9 +9,9 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from md_mid.cli import cli as main
-from md_mid.diagnostic import DiagCollector
-from md_mid.nodes import (
+from wenqiao.cli import cli as main
+from wenqiao.diagnostic import DiagCollector
+from wenqiao.nodes import (
     Citation,
     CrossRef,
     Document,
@@ -21,7 +21,7 @@ from md_mid.nodes import (
     Table,
     Text,
 )
-from md_mid.validate import (
+from wenqiao.validate import (
     ValidationInfo,
     collect_east_info,
     validate_bib,

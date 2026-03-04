@@ -1,13 +1,13 @@
-"""端到端集成测试：md-mid source → LaTeX / Markdown output
+"""端到端集成测试：Wenqiao MID source → LaTeX / Markdown output
 (End-to-end integration tests for LaTeX and Markdown pipelines)
 """
 
 from pathlib import Path
 
-from md_mid.comment import process_comments
-from md_mid.latex import LaTeXRenderer
-from md_mid.markdown import MarkdownRenderer
-from md_mid.parser import parse
+from wenqiao.comment import process_comments
+from wenqiao.latex import LaTeXRenderer
+from wenqiao.markdown import MarkdownRenderer
+from wenqiao.parser import parse
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -174,7 +174,7 @@ def test_markdown_e2e_full_example(tmp_path: Path) -> None:
     """
     from click.testing import CliRunner
 
-    from md_mid.cli import main
+    from wenqiao.cli import main
 
     src = FIXTURES / "full_example.mid.md"
     out = tmp_path / "full.rendered.md"
@@ -203,7 +203,7 @@ def test_markdown_heading_labels_as_anchors(tmp_path: Path) -> None:
     """
     from click.testing import CliRunner
 
-    from md_mid.cli import main
+    from wenqiao.cli import main
 
     src = tmp_path / "test.mid.md"
     src.write_text("# Introduction\n<!-- label: sec:intro -->\n\nSome text.\n")

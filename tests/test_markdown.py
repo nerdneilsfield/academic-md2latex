@@ -1,5 +1,5 @@
-from md_mid.markdown import MarkdownRenderer
-from md_mid.nodes import (
+from wenqiao.markdown import MarkdownRenderer
+from wenqiao.nodes import (
     Blockquote,
     Citation,
     CodeBlock,
@@ -827,7 +827,7 @@ class TestUnhandledNodeWarning:
 
     def test_unhandled_node_warning_has_position(self) -> None:
         """未处理节点警告含位置 (Unhandled node warning includes position)."""
-        from md_mid.diagnostic import DiagCollector
+        from wenqiao.diagnostic import DiagCollector
 
         class FakeNode(Node):
             @property
@@ -851,7 +851,7 @@ class TestHtmlPassthrough:
 
     def test_html_block_passthrough(self) -> None:
         """Fix C: HTML block 透传为原始内容 (HTML block passes through as-is)."""
-        from md_mid.nodes import RawBlock
+        from wenqiao.nodes import RawBlock
 
         rb = RawBlock(content="<div>hello</div>", kind="html")
         result = render(doc(rb))
@@ -860,7 +860,7 @@ class TestHtmlPassthrough:
 
     def test_html_inline_passthrough(self) -> None:
         """Fix C: HTML inline 透传为原始内容 (HTML inline passes through as-is)."""
-        from md_mid.nodes import RawBlock
+        from wenqiao.nodes import RawBlock
 
         rb = RawBlock(content="<span>hi</span>", kind="html")
         result = render(doc(rb))
@@ -869,7 +869,7 @@ class TestHtmlPassthrough:
 
     def test_latex_raw_block_details_fold(self) -> None:
         """Fix C: LaTeX 块仍被折叠 (LaTeX raw block wrapped in details fold)."""
-        from md_mid.nodes import RawBlock
+        from wenqiao.nodes import RawBlock
 
         rb = RawBlock(content="\\newcommand{\\myvec}{\\mathbf}", kind="latex")
         result = render(doc(rb))
@@ -886,7 +886,7 @@ class TestNativeFootnoteDef:
 
     def test_native_footnote_def_rendered(self) -> None:
         """Fix E: 原生脚注定义出现在输出末尾 (Native footnote def appears at end of output)."""
-        from md_mid.parser import parse as md_parse
+        from wenqiao.parser import parse as md_parse
 
         # Note: markdown-it-py footnote plugin uses 0-indexed internal IDs (脚注插件使用 0 起始 ID)
         src = "See[^note] this.\n\n[^note]: My note text\n"
@@ -897,7 +897,7 @@ class TestNativeFootnoteDef:
 
     def test_native_footnote_def_and_citation_both_rendered(self) -> None:
         """Fix E: 原生脚注和引用脚注都出现在输出中 (Both native and citation footnotes appear)."""
-        from md_mid.nodes import FootnoteDef
+        from wenqiao.nodes import FootnoteDef
 
         # Build AST directly with a Citation and a native FootnoteDef (直接构建含引用和脚注的 AST)
         bib = {"smith2024": "Smith, 2024"}
@@ -929,7 +929,7 @@ class TestStateLeak:
 
         第二次 render() 调用不应携带第一次调用残留的脚注定义。
         """
-        from md_mid.nodes import FootnoteDef, FootnoteRef
+        from wenqiao.nodes import FootnoteDef, FootnoteRef
 
         # Doc A: has a footnote definition (文档 A：含脚注定义)
         fn_def = FootnoteDef(

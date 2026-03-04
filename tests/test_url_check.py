@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from md_mid.url_check import is_unsafe_url
+from wenqiao.url_check import is_unsafe_url
 
 
 class TestIsUnsafeUrl:

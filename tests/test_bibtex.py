@@ -1,4 +1,4 @@
-from md_mid.bibtex import parse_bib
+from wenqiao.bibtex import parse_bib
 
 BIB_CONTENT = r"""
 @article{wang2024,

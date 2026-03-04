@@ -1,4 +1,4 @@
-from md_mid.escape import escape_latex, escape_latex_with_protection
+from wenqiao.escape import escape_latex, escape_latex_with_protection
 
 
 class TestEscapeLaTeX:

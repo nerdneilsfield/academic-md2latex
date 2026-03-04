@@ -9,7 +9,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from md_mid.cli import cli as main
+from wenqiao.cli import cli as main
 
 
 def test_format_inplace(tmp_path: Path) -> None:

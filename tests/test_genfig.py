@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from md_mid.genfig import FigureJob, FigureRunner, collect_jobs, generate_figure_job
-from md_mid.nodes import Document, Figure, Image, Paragraph
+from wenqiao.genfig import FigureJob, FigureRunner, collect_jobs, generate_figure_job
+from wenqiao.nodes import Document, Figure, Image, Paragraph
 
 # ── MockRunner (测试用 FigureRunner 子类) ─────────────────────────────────────
 

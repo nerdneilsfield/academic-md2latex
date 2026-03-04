@@ -2,12 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from md_mid.config import MdMidConfig, load_config_file, load_template, resolve_config
+from wenqiao.config import WenqiaoConfig, load_config_file, load_template, resolve_config
 
 
 def test_config_defaults() -> None:
     """Default config values match PRD §10.2 (默认配置值)."""
-    cfg = MdMidConfig()
+    cfg = WenqiaoConfig()
     assert cfg.target == "latex"
     assert cfg.mode == "full"
     assert cfg.documentclass == "article"
@@ -25,7 +25,7 @@ def test_config_defaults() -> None:
 def test_config_from_dict() -> None:
     """Build config from dict with kebab-to-snake normalization (从字典构建配置)."""
     d = {"mode": "fragment", "code-style": "minted", "ref-tilde": False}
-    cfg = MdMidConfig.from_dict(d)
+    cfg = WenqiaoConfig.from_dict(d)
     assert cfg.mode == "fragment"
     assert cfg.code_style == "minted"
     assert cfg.ref_tilde is False
@@ -34,7 +34,7 @@ def test_config_from_dict() -> None:
 def test_config_from_dict_ignores_unknown() -> None:
     """Unknown keys are ignored (未知键被忽略)."""
     d = {"mode": "body", "unknown-key": "value"}
-    cfg = MdMidConfig.from_dict(d)
+    cfg = WenqiaoConfig.from_dict(d)
     assert cfg.mode == "body"
 
 
@@ -92,14 +92,14 @@ def test_resolve_config_mutable_defaults_not_shared() -> None:
 def test_config_from_dict_list_value_is_copied() -> None:
     """from_dict shallow-copies list values to prevent aliasing (from_dict 浅拷贝列表防别名)."""
     source = ["11pt", "a4paper"]
-    cfg = MdMidConfig.from_dict({"classoptions": source})
+    cfg = WenqiaoConfig.from_dict({"classoptions": source})
     source.append("draft")
     assert "draft" not in cfg.classoptions
 
 
 def test_load_config_file(tmp_path: Path) -> None:
     """Load external config file (加载外部配置文件)."""
-    cfg_file = tmp_path / "md-mid.yaml"
+    cfg_file = tmp_path / "wenqiao.yaml"
     cfg_file.write_text(
         "latex:\n"
         "  mode: body\n"
@@ -117,13 +117,13 @@ def test_load_config_file(tmp_path: Path) -> None:
 
 def test_load_config_file_not_found() -> None:
     """Missing config file returns empty dict (不存在的配置文件返回空字典)."""
-    d = load_config_file(Path("/nonexistent/md-mid.yaml"))
+    d = load_config_file(Path("/nonexistent/wenqiao.yaml"))
     assert d == {}
 
 
 def test_load_config_file_flat_keys(tmp_path: Path) -> None:
     """Flat key config (扁平键配置)."""
-    cfg_file = tmp_path / "md-mid.yaml"
+    cfg_file = tmp_path / "wenqiao.yaml"
     cfg_file.write_text("default-target: markdown\n")
     d = load_config_file(cfg_file)
     assert d["target"] == "markdown"
@@ -131,7 +131,7 @@ def test_load_config_file_flat_keys(tmp_path: Path) -> None:
 
 def test_load_config_file_invalid_yaml(tmp_path: Path) -> None:
     """Invalid YAML returns empty dict with no crash (无效 YAML 不崩溃)."""
-    cfg_file = tmp_path / "md-mid.yaml"
+    cfg_file = tmp_path / "wenqiao.yaml"
     cfg_file.write_text(": invalid: yaml: {{{\n")
     d = load_config_file(cfg_file)
     assert d == {}
@@ -189,7 +189,7 @@ def test_load_template_extra_preamble_mapped(tmp_path: Path) -> None:
 
 def test_load_template_missing_file() -> None:
     """Missing template returns empty dict (不存在的模板返回空字典)."""
-    from md_mid.diagnostic import DiagCollector
+    from wenqiao.diagnostic import DiagCollector
 
     diag = DiagCollector("<test>")
     d = load_template(Path("/nonexistent/template.yaml"), diag=diag)
@@ -198,7 +198,7 @@ def test_load_template_missing_file() -> None:
 
 def test_load_template_invalid_yaml_warns(tmp_path: Path) -> None:
     """Invalid YAML template produces diag warning (无效 YAML 模板产生诊断警告)."""
-    from md_mid.diagnostic import DiagCollector, DiagLevel
+    from wenqiao.diagnostic import DiagCollector, DiagLevel
 
     tpl = tmp_path / "bad.yaml"
     tpl.write_text("{unclosed\n")
@@ -211,10 +211,10 @@ def test_load_template_invalid_yaml_warns(tmp_path: Path) -> None:
 
 def test_from_dict_unknown_key_info() -> None:
     """Unknown keys produce info diagnostic (未知键产生 info 诊断)."""
-    from md_mid.diagnostic import DiagCollector, DiagLevel
+    from wenqiao.diagnostic import DiagCollector, DiagLevel
 
     diag = DiagCollector("<test>")
-    cfg = MdMidConfig.from_dict({"mode": "body", "unknown-key": "value"}, diag=diag)
+    cfg = WenqiaoConfig.from_dict({"mode": "body", "unknown-key": "value"}, diag=diag)
     assert cfg.mode == "body"
     assert any(d.level == DiagLevel.INFO and "unknown-key" in d.message for d in diag.diagnostics)
 
@@ -222,16 +222,16 @@ def test_from_dict_unknown_key_info() -> None:
 def test_config_type_error_classoptions_int() -> None:
     """classoptions as int raises TypeError (classoptions 为 int 时抛出 TypeError)."""
     with pytest.raises(TypeError, match="classoptions"):
-        MdMidConfig.from_dict({"classoptions": 12})
+        WenqiaoConfig.from_dict({"classoptions": 12})
 
 
 def test_config_type_error_packages_str() -> None:
     """packages as str raises TypeError (packages 为 str 时抛出 TypeError)."""
     with pytest.raises(TypeError, match="packages"):
-        MdMidConfig.from_dict({"packages": "numpy"})
+        WenqiaoConfig.from_dict({"packages": "numpy"})
 
 
 def test_config_type_error_classoptions_int_element() -> None:
     """classoptions with int element raises TypeError (classoptions 含 int 元素时抛出 TypeError)."""
     with pytest.raises(TypeError, match=r"classoptions\[0\]"):
-        MdMidConfig.from_dict({"classoptions": [12]})
+        WenqiaoConfig.from_dict({"classoptions": [12]})

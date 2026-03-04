@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from md_mid.nodes import (
+from wenqiao.nodes import (
     Blockquote,
     Citation,
     CodeInline,
@@ -17,7 +17,7 @@ from md_mid.nodes import (
     Table,
     Text,
 )
-from md_mid.parser import parse
+from wenqiao.parser import parse
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -146,7 +146,7 @@ def test_ref():
 def test_regular_link_not_converted():
     doc = parse("[click](http://example.com)")
     para = doc.children[0]
-    from md_mid.nodes import Link
+    from wenqiao.nodes import Link
 
     links = [c for c in para.children if isinstance(c, Link)]
     assert len(links) == 1
@@ -168,7 +168,7 @@ def test_cite_empty_key_filtered() -> None:
 
 def test_cite_invalid_cmd_warning() -> None:
     """无效的引用命令触发 warning（Invalid cite cmd triggers warning）."""
-    from md_mid.diagnostic import DiagCollector
+    from wenqiao.diagnostic import DiagCollector
 
     dc = DiagCollector("test.md")
     doc = parse("[text](cite:wang2024?cmd=badcmd)", diag=dc)
@@ -183,7 +183,7 @@ def test_cite_invalid_cmd_warning() -> None:
 
 def test_cite_valid_cmd_no_warning() -> None:
     """合法的引用命令不触发 warning（Valid cite cmd does not trigger warning）."""
-    from md_mid.diagnostic import DiagCollector
+    from wenqiao.diagnostic import DiagCollector
 
     dc = DiagCollector("test.md")
     parse("[text](cite:wang2024?cmd=citet)", diag=dc)

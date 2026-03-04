@@ -9,17 +9,17 @@ from pathlib import Path
 
 import pytest
 
-from md_mid import (
+from wenqiao import (
     ConversionError,
     ConvertResult,
     Document,
-    MdMidConfig,
+    WenqiaoConfig,
     convert,
     format_text,
     parse_document,
     validate_text,
 )
-from md_mid.diagnostic import DiagLevel
+from wenqiao.diagnostic import DiagLevel
 
 # -- Fixtures (测试固件) -----------------------------------------------------
 
@@ -74,7 +74,7 @@ def test_convert_with_mode() -> None:
 def test_convert_with_locale() -> None:
     """Convert with locale parameter (使用 locale 参数转换)."""
     result = convert(SIMPLE_MD, target="latex", locale="en")
-    assert isinstance(result.config, MdMidConfig)
+    assert isinstance(result.config, WenqiaoConfig)
     # Config should reflect locale=en (配置应反映 locale=en)
     assert result.config.locale == "en"
 
@@ -86,8 +86,8 @@ def test_convert_with_config_dict() -> None:
 
 
 def test_convert_with_config_object() -> None:
-    """Convert with MdMidConfig directly (直接使用 MdMidConfig 转换)."""
-    cfg = MdMidConfig(mode="body", locale="en")
+    """Convert with WenqiaoConfig directly (直接使用 WenqiaoConfig 转换)."""
+    cfg = WenqiaoConfig(mode="body", locale="en")
     result = convert(SIMPLE_MD, config=cfg)
     assert result.config is cfg
     assert "\\documentclass" not in result.text
@@ -143,7 +143,7 @@ def test_convert_result_attributes() -> None:
     result = convert(SIMPLE_MD)
     assert isinstance(result.text, str)
     assert isinstance(result.diagnostics, list)
-    assert isinstance(result.config, MdMidConfig)
+    assert isinstance(result.config, WenqiaoConfig)
     assert isinstance(result.document, Document)
 
 
@@ -162,8 +162,8 @@ def test_convert_target_from_config_dict() -> None:
 
 
 def test_convert_target_from_config_object() -> None:
-    """Target from MdMidConfig object is respected (MdMidConfig 对象的 target 被使用)."""
-    cfg = MdMidConfig(target="markdown", mode="full")
+    """Target from WenqiaoConfig object is respected (WenqiaoConfig 对象的 target 被使用)."""
+    cfg = WenqiaoConfig(target="markdown", mode="full")
     result = convert(SIMPLE_MD, config=cfg)
     # Should render Markdown, not LaTeX (应渲染 Markdown 而非 LaTeX)
     assert "\\documentclass" not in result.text

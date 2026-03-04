@@ -1,4 +1,4 @@
-from md_mid.nodes import (
+from wenqiao.nodes import (
     Citation,
     CrossRef,
     Document,

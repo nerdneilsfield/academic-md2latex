@@ -3,14 +3,14 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from md_mid.cli import cli as main
+from wenqiao.cli import cli as main
 
 
 def test_help() -> None:
     """帮助输出正常（Help output works）."""
     result = CliRunner().invoke(main, ["--help"])
     assert result.exit_code == 0
-    assert "md-mid" in result.output or "input" in result.output.lower()
+    assert "wenqiao" in result.output.lower() or "input" in result.output.lower()
 
 
 def test_version() -> None:
@@ -248,7 +248,7 @@ def test_cli_template_option(tmp_path: Path) -> None:
 
 def test_cli_config_option_thematic_break(tmp_path: Path) -> None:
     """--config 加载外部配置 (--config loads external config)."""
-    cfg = tmp_path / "md-mid.yaml"
+    cfg = tmp_path / "wenqiao.yaml"
     cfg.write_text("latex:\n  thematic-break: hrule\n")
     src = tmp_path / "t.mid.md"
     src.write_text("---\n\n# Section\n")
@@ -287,7 +287,7 @@ def test_cli_config_title_author_injected(tmp_path: Path) -> None:
 
     配置文件元数据注入到 LaTeX 输出。
     """
-    cfg = tmp_path / "md-mid.yaml"
+    cfg = tmp_path / "wenqiao.yaml"
     cfg.write_text(
         "title: Config Title\n"
         "author: Config Author\n"
@@ -312,7 +312,7 @@ def test_cli_default_target_from_config(tmp_path: Path) -> None:
     When --target is not given on CLI and config says default-target: markdown,
     the markdown renderer should be used. (未指定 --target 时，配置中的 default-target 生效。)
     """
-    cfg = tmp_path / "md-mid.yaml"
+    cfg = tmp_path / "wenqiao.yaml"
     cfg.write_text("default-target: markdown\n")
     src = tmp_path / "t.mid.md"
     src.write_text("# Hello\n\nWorld.\n")
@@ -327,7 +327,7 @@ def test_cli_default_target_from_config(tmp_path: Path) -> None:
 
 def test_cli_explicit_mode_overrides_config(tmp_path: Path) -> None:
     """CLI --mode 覆盖配置文件 (CLI --mode overrides config file mode)."""
-    cfg = tmp_path / "md-mid.yaml"
+    cfg = tmp_path / "wenqiao.yaml"
     cfg.write_text("latex:\n  mode: body\n")
     src = tmp_path / "t.mid.md"
     src.write_text("# Intro\n\nText.\n")
@@ -383,7 +383,7 @@ def test_html_default_suffix(tmp_path: Path) -> None:
 
 def test_html_config_title_injected(tmp_path: Path) -> None:
     """Config title appears in HTML <title> tag (配置标题出现在 HTML title 标签中)."""
-    cfg = tmp_path / "md-mid.yaml"
+    cfg = tmp_path / "wenqiao.yaml"
     cfg.write_text("title: My HTML Title\n")
     src = tmp_path / "t.mid.md"
     src.write_text("# Hello\n\nWorld.\n")
@@ -401,7 +401,7 @@ def test_invalid_target_exits_before_side_effects(tmp_path: Path) -> None:
 
     配置中无效目标在 generate-figures 执行前退出。
     """
-    cfg = tmp_path / "md-mid.yaml"
+    cfg = tmp_path / "wenqiao.yaml"
     cfg.write_text("default-target: invalid\n")
     src = tmp_path / "t.mid.md"
     src.write_text("# Hello\n\nWorld.\n")
@@ -454,7 +454,7 @@ def test_bad_config_type_shows_friendly_error(tmp_path: Path) -> None:
 
     配置类型错误（如 classoptions: 12）时输出友好错误信息。
     """
-    cfg = tmp_path / "md-mid.yaml"
+    cfg = tmp_path / "wenqiao.yaml"
     # classoptions should be a list, not an integer (classoptions 应为列表而非整数)
     cfg.write_text("classoptions: 12\n")
     src = tmp_path / "t.mid.md"
@@ -471,10 +471,7 @@ def test_bad_config_type_shows_friendly_error(tmp_path: Path) -> None:
 
 
 def test_no_subcommand_defaults_to_convert(tmp_path: Path) -> None:
-    """md-mid FILE (no subcommand) defaults to convert (无子命令默认为 convert).
-
-    Backward compatibility: ``md-mid file.mid.md`` still works.
-    """
+    """wenqiao FILE (no subcommand) defaults to convert (无子命令默认为 convert)."""
     src = tmp_path / "test.mid.md"
     src.write_text("# Hello\n\nWorld.\n")
     out = tmp_path / "test.tex"
@@ -496,10 +493,7 @@ def test_convert_subcommand_explicit(tmp_path: Path) -> None:
 
 
 def test_option_first_invocation(tmp_path: Path) -> None:
-    """Option-first form md-mid -o out file works (选项在前的调用方式仍可用).
-
-    Backward compat: ``md-mid -o out.tex file.mid.md`` must still route to convert.
-    """
+    """Option-first form wenqiao -o out file works (选项在前的调用方式仍可用)."""
     src = tmp_path / "test.mid.md"
     src.write_text("# Hello\n\nWorld.\n")
     out = tmp_path / "test.tex"

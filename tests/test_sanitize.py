@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from md_mid.sanitize import sanitize_html
+from wenqiao.sanitize import sanitize_html
 
 
 class TestSanitizeScriptTag:
