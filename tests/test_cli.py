@@ -1,9 +1,22 @@
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from wenqiao.cli import cli as main
+
+
+@pytest.fixture
+def runner() -> CliRunner:
+    """Return a Click test runner (返回 Click 测试运行器)."""
+    return CliRunner()
+
+
+@pytest.fixture
+def cli() -> object:
+    """Return the CLI entry point (返回 CLI 入口)."""
+    return main
 
 
 def test_help() -> None:
@@ -516,3 +529,32 @@ def test_format_help() -> None:
     result = CliRunner().invoke(main, ["format", "--help"])
     assert result.exit_code == 0
     assert "format" in result.output.lower()
+
+
+# ── Task 5: --preset CLI flag ─────────────────────────────────────────────────
+
+
+def test_preset_zh_cli(tmp_path: Path, runner: CliRunner) -> None:
+    """--preset zh should produce ctexart in output (CLI --preset zh 产生 ctexart).
+
+    Verifies the --preset CLI flag is wired to the preset layer.
+    (验证 --preset CLI 标志已接入预设层。)
+    """
+    src = tmp_path / "paper.mid.md"
+    src.write_text("# Hello\n")
+    out = tmp_path / "paper.tex"
+    result = runner.invoke(main, ["convert", str(src), "--preset", "zh", "-o", str(out)])
+    assert result.exit_code == 0, result.output
+    assert "ctexart" in out.read_text()
+
+
+def test_preset_unknown_cli(tmp_path: Path, runner: CliRunner) -> None:
+    """--preset with unknown name should exit non-zero (未知预设应以非零码退出).
+
+    click.Choice validation rejects unknown presets before conversion runs.
+    (click.Choice 在转换运行前拒绝未知预设。)
+    """
+    src = tmp_path / "paper.mid.md"
+    src.write_text("# Hello\n")
+    result = runner.invoke(main, ["convert", str(src), "--preset", "nope"])
+    assert result.exit_code != 0

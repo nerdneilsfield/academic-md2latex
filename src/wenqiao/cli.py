@@ -111,6 +111,12 @@ def cli(ctx: click.Context) -> None:
     help="Label language (标签语言): zh | en  [default: zh]",
 )
 @click.option(
+    "--preset",
+    type=click.Choice(["zh", "en"]),
+    default=None,
+    help="Built-in preset (内置预设): zh | en",
+)
+@click.option(
     "--template",
     "template_path",
     type=click.Path(exists=True, path_type=Path),
@@ -162,6 +168,7 @@ def convert_cmd(
     bib_path: Path | None,
     heading_id_style: str | None,
     locale: str | None,
+    preset: str | None,
     template_path: Path | None,
     config_path: Path | None,
     bibliography_mode: str | None,
@@ -208,6 +215,7 @@ def convert_cmd(
             cli_overrides=cli_dict if cli_dict else None,
             config_path=config_path,
             template_path=template_path,
+            preset_name=preset,    # Built-in preset (内置预设)
             diag=diag,
         )
     except TypeError as e:
