@@ -30,7 +30,7 @@ from md_mid.parser import parse
     "--mode",
     type=click.Choice(["full", "body", "fragment"]),
     default=None,
-    help="Output mode: full | body | fragment  (默认: full)",
+    help="Output mode (输出模式): full | body | fragment  [default: full]",
 )
 @click.option("--strict", is_flag=True, default=False)
 @click.option("--verbose", is_flag=True, default=False)
@@ -45,61 +45,61 @@ from md_mid.parser import parse
     "--heading-id-style",
     type=click.Choice(["attr", "html"]),
     default=None,
-    help="Heading anchor style: attr ({#id}) | html (<h2 id>)",
+    help="Heading anchor style (标题锚点样式): attr ({#id}) | html (<h2 id>)",
 )
 @click.option(
     "--locale",
     type=click.Choice(["zh", "en"]),
     default=None,
-    help="Label language: zh | en  (默认: zh)",
+    help="Label language (标签语言): zh | en  [default: zh]",
 )
 @click.option(
     "--template",
     "template_path",
     type=click.Path(exists=True, path_type=Path),
     default=None,
-    help="LaTeX template file (.yaml)",
+    help="LaTeX template file (LaTeX 模板文件, .yaml)",
 )
 @click.option(
     "--config",
     "config_path",
     type=click.Path(exists=True, path_type=Path),
     default=None,
-    help="External config file (md-mid.yaml)",
+    help="External config file (外部配置文件, md-mid.yaml)",
 )
 @click.option(
     "--bibliography-mode",
     type=click.Choice(["auto", "standalone", "external", "none"]),
     default=None,
-    help="Bibliography output strategy",
+    help="Bibliography output strategy (参考文献输出策略)",
 )
 @click.option(
     "--generate-figures",
     "generate_figures",
     is_flag=True,
     default=False,
-    help="Generate AI figures (ai-generated: true) via runner before rendering",
+    help="Generate AI figures via runner before rendering (渲染前通过 runner 生成 AI 图片)",
 )
 @click.option(
     "--figures-runner",
     "figures_runner",
     type=click.Path(path_type=Path),
     default=None,
-    help="Path to nanobanana-compatible runner script (WARNING: executes as Python code)",
+    help="Runner script path (runner 脚本路径; WARNING: executes as Python code)",
 )
 @click.option(
     "--figures-config",
     "figures_config",
     type=click.Path(exists=True, path_type=Path),
     default=None,
-    help="TOML config for runner (API key, model, etc.)",
+    help="TOML config for runner (runner 的 TOML 配置: API key, model 等)",
 )
 @click.option(
     "--force-regenerate",
     "force_regenerate",
     is_flag=True,
     default=False,
-    help="Re-generate AI figures even if image files already exist",
+    help="Re-generate AI figures even if image files already exist (强制重新生成已有图片)",
 )
 @click.version_option(version=__version__)
 def main(
@@ -121,7 +121,7 @@ def main(
     figures_config: Path | None,
     force_regenerate: bool,
 ) -> None:
-    """md-mid: 学术写作中间格式转换工具"""
+    """md-mid: Academic Markdown intermediate format converter (学术 Markdown 中间格式转换工具)."""
     # 读取输入：stdin 或文件 (Read input: stdin or file)
     if str(input) == "-":
         text = sys.stdin.read()
