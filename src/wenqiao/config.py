@@ -328,4 +328,9 @@ def load_config_file(
         else:
             flat[key] = val
 
+    # Map extra-preamble → preamble for consistency with template loader
+    # (将 extra-preamble 映射为 preamble，与模板加载器保持一致)
+    if "extra-preamble" in flat:
+        flat["preamble"] = flat.pop("extra-preamble")
+
     return flat
