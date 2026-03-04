@@ -22,6 +22,7 @@ from md_mid.nodes import (
     ListItem,
     MathBlock,
     MathInline,
+    Node,
     Paragraph,
     RawBlock,
     SoftBreak,
@@ -582,6 +583,28 @@ class TestHtmlFootnoteOrder:
 
 
 # ── URL safety: data:image/svg+xml blocked ───────────────────────────────────
+
+
+class TestHtmlUnknownNode:
+    """Unknown node type produces diagnostic warning (未知节点类型产生诊断警告)."""
+
+    def test_html_unknown_node_warns(self) -> None:
+        """Unknown node emits warning via DiagCollector (未知节点发出警告)."""
+        from dataclasses import dataclass
+
+        from md_mid.diagnostic import DiagCollector, DiagLevel
+
+        @dataclass
+        class _FakeNode(Node):
+            @property
+            def type(self) -> str:
+                return "unknown_custom_type"
+
+        diag = DiagCollector("<test>")
+        d = doc(Paragraph(children=[_FakeNode()]))
+        HTMLRenderer(diag=diag).render(d)
+        warns = [w for w in diag.diagnostics if w.level == DiagLevel.WARNING]
+        assert any("unknown_custom_type" in w.message for w in warns)
 
 
 class TestHtmlLinkDataSvg:

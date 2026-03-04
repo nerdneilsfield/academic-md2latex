@@ -12,10 +12,9 @@ from pathlib import Path
 
 import click
 
-from md_mid.comment import process_comments
 from md_mid.diagnostic import DiagCollector
 from md_mid.markdown import MarkdownRenderer
-from md_mid.parser import parse
+from md_mid.pipeline import parse_and_process
 
 
 @click.command("format")
@@ -56,8 +55,7 @@ def format_cmd(
     diag = DiagCollector(filename)
 
     # Parse → process comments → render (解析 → 处理注释 → 渲染)
-    doc = parse(original, diag=diag)
-    east = process_comments(doc, filename, diag=diag)
+    east = parse_and_process(original, filename, diag)
     renderer = MarkdownRenderer(mode="full", diag=diag)
     formatted = renderer.render(east)
 

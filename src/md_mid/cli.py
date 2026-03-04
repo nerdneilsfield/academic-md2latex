@@ -13,13 +13,15 @@ from pathlib import Path
 import click
 
 from md_mid import __version__
-from md_mid.comment import process_comments
-from md_mid.config import load_config_file, load_template, resolve_config
 from md_mid.diagnostic import DiagCollector
 from md_mid.format_cmd import format_cmd
-from md_mid.latex import LaTeXRenderer
-from md_mid.markdown import MarkdownRenderer
-from md_mid.parser import parse
+from md_mid.pipeline import (
+    build_config,
+    create_renderer,
+    inject_metadata,
+    parse_and_process,
+    resolve_bib,
+)
 from md_mid.validate import validate_cmd
 
 # ---------------------------------------------------------------------------
@@ -136,13 +138,6 @@ def cli(ctx: click.Context) -> None:
     help="Generate AI figures via runner before rendering (渲染前通过 runner 生成 AI 图片)",
 )
 @click.option(
-    "--figures-runner",
-    "figures_runner",
-    type=click.Path(path_type=Path),
-    default=None,
-    help="Runner script path (runner 脚本路径; WARNING: executes as Python code)",
-)
-@click.option(
     "--figures-config",
     "figures_config",
     type=click.Path(exists=True, path_type=Path),
@@ -171,7 +166,6 @@ def convert_cmd(
     config_path: Path | None,
     bibliography_mode: str | None,
     generate_figures: bool,
-    figures_runner: Path | None,
     figures_config: Path | None,
     force_regenerate: bool,
 ) -> None:
@@ -193,8 +187,7 @@ def convert_cmd(
     diag = DiagCollector(filename)
 
     # 解析并处理注释指令（Parse and process comment directives）
-    doc = parse(text, diag=diag)
-    east = process_comments(doc, filename, diag=diag)
+    east = parse_and_process(text, filename, diag)
 
     # 构建 CLI 覆盖字典 — 仅非 None 值参与覆盖
     # (Build CLI override dict — only non-None values participate)
@@ -208,17 +201,14 @@ def convert_cmd(
     if bibliography_mode is not None:
         cli_dict["bibliography_mode"] = bibliography_mode
 
-    # 加载配置层 (Load config layers)
-    tpl_dict = load_template(template_path) if template_path else None
-    cfg_dict = load_config_file(config_path) if config_path else None
-
     # 解析最终配置 (Resolve final config)
     try:
-        cfg = resolve_config(
+        cfg = build_config(
+            east.metadata,
             cli_overrides=cli_dict if cli_dict else None,
-            east_meta=east.metadata,
-            config_dict=cfg_dict,
-            template_dict=tpl_dict,
+            config_path=config_path,
+            template_path=template_path,
+            diag=diag,
         )
     except TypeError as e:
         click.echo(f"Configuration error: {e}", err=True)
@@ -249,42 +239,21 @@ def convert_cmd(
     # Optional AI figure generation (可选 AI 图片生成)
     if generate_figures:
         from md_mid.genfig import run_generate_figures
+        from md_mid.genfig_openai import OpenAIFigureRunner
 
-        # Resolve runner path (解析 runner 路径)
-        if figures_runner is None:
-            # Default: nanobanana.py from generate-figures skill (默认 runner 路径)
-            skill_runner = (
-                Path.home()
-                / ".claude"
-                / "skills"
-                / "generate-figures"
-                / "tools"
-                / "fig"
-                / "nanobanana.py"
-            )
-            if not skill_runner.exists():
-                click.echo(
-                    "[generate-figures] Runner not found. Specify --figures-runner PATH.",
-                    err=True,
-                )
-                raise SystemExit(1)
-            figures_runner = skill_runner
-
-        # Base directory for resolving image paths (图片路径解析基目录)
         base_dir = Path(filename).parent if filename != "<stdin>" else Path.cwd()
+        runner = OpenAIFigureRunner(config=figures_config)
 
         try:
             success, fail = run_generate_figures(
                 east,
                 base_dir=base_dir,
-                runner_path=figures_runner,
-                config=figures_config,
+                runner=runner,
                 force=force_regenerate,
                 echo=lambda msg: click.echo(msg, err=True),
             )
-        except (ImportError, FileNotFoundError, OSError) as e:
-            # Friendly error for runner load failures (runner 加载失败友好报错)
-            click.echo(f"[generate-figures] Runner load failed: {e}", err=True)
+        except (ImportError, OSError) as e:
+            click.echo(f"[generate-figures] Runner failed: {e}", err=True)
             raise SystemExit(1)
         if fail > 0:
             click.echo(
@@ -292,87 +261,22 @@ def convert_cmd(
                 err=True,
             )
 
-    if effective_target == "latex":
-        # Inject resolved preamble metadata into EAST for renderer use
-        # (将解析后的元数据回注 EAST 供渲染器使用)
-        east.metadata.update(
-            {
-                "documentclass": cfg.documentclass,
-                "classoptions": cfg.classoptions,
-                "packages": cfg.packages,
-                "package_options": cfg.package_options,
-                "bibliography": cfg.bibliography,
-                "bibstyle": cfg.bibstyle,
-                "preamble": cfg.preamble,
-                "bibliography_mode": cfg.bibliography_mode,
-                # Document metadata — empty strings are falsy, renderer skips
-                # (文档元数据 — 空字符串渲染器跳过)
-                "title": cfg.title,
-                "author": cfg.author,
-                "date": cfg.date,
-                "abstract": cfg.abstract,
-            }
-        )
+    # Resolve bibliography (解析参考文献)
+    bib: dict[str, str] = {}
+    if bib_path is not None:
+        try:
+            bib = resolve_bib(bib_path)
+        except Exception as exc:
+            click.echo(f"[WARNING] Failed to parse {bib_path}: {exc}", err=True)
 
-        renderer = LaTeXRenderer(
-            mode=cfg.mode,
-            ref_tilde=cfg.ref_tilde,
-            code_style=cfg.code_style,
-            thematic_break=cfg.thematic_break,
-            locale=cfg.locale,
-            diag=diag,
-        )
-        result = renderer.render(east)
-        suffix = ".tex"
-    elif effective_target == "markdown":
-        # 解析 .bib 文件（Parse .bib file if provided）
-        bib: dict[str, str] = {}
-        if bib_path is not None:
-            from md_mid.bibtex import parse_bib
+    # Inject metadata and render (注入元数据并渲染)
+    inject_metadata(east, cfg, effective_target)
+    renderer_obj = create_renderer(effective_target, cfg, bib, diag)
+    result = renderer_obj.render(east)
 
-            # 优雅处理无效 bib 文件 (Gracefully handle invalid .bib files)
-            try:
-                bib = parse_bib(bib_path.read_text(encoding="utf-8"))
-            except Exception as exc:
-                click.echo(f"[WARNING] Failed to parse {bib_path}: {exc}", err=True)
-        renderer_md = MarkdownRenderer(
-            bib=bib,
-            heading_id_style=cfg.heading_id_style,
-            locale=cfg.locale,
-            mode=cfg.mode,
-            diag=diag,
-        )
-        result = renderer_md.render(east)
-        suffix = ".rendered.md"
-    elif effective_target == "html":
-        from md_mid.html import HTMLRenderer
-
-        # Parse .bib file if provided (解析 .bib 文件)
-        bib_html: dict[str, str] = {}
-        if bib_path is not None:
-            from md_mid.bibtex import parse_bib
-
-            try:
-                bib_html = parse_bib(bib_path.read_text(encoding="utf-8"))
-            except Exception as exc:
-                click.echo(f"[WARNING] Failed to parse {bib_path}: {exc}", err=True)
-        # Inject config metadata for HTML renderer (注入配置元数据供 HTML 渲染器使用)
-        east.metadata.update(
-            {
-                "title": cfg.title,
-                "author": cfg.author,
-                "date": cfg.date,
-                "abstract": cfg.abstract,
-            }
-        )
-        renderer_html = HTMLRenderer(
-            mode=cfg.mode,
-            bib=bib_html,
-            locale=cfg.locale,
-            diag=diag,
-        )
-        result = renderer_html.render(east)
-        suffix = ".html"
+    # Determine output suffix (确定输出后缀)
+    suffix_map = {"latex": ".tex", "markdown": ".rendered.md", "html": ".html"}
+    suffix = suffix_map[effective_target]
     # 写入输出：stdout 或文件 (Write output: stdout or file)
     write_to_stdout = (output is not None and str(output) == "-") or (
         output is None and str(input) == "-"

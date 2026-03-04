@@ -187,6 +187,38 @@ def test_load_template_extra_preamble_mapped(tmp_path: Path) -> None:
 # ── P1-2: Config type validation ─────────────────────────────────────────────
 
 
+def test_load_template_missing_file() -> None:
+    """Missing template returns empty dict (不存在的模板返回空字典)."""
+    from md_mid.diagnostic import DiagCollector
+
+    diag = DiagCollector("<test>")
+    d = load_template(Path("/nonexistent/template.yaml"), diag=diag)
+    assert d == {}
+
+
+def test_load_template_invalid_yaml_warns(tmp_path: Path) -> None:
+    """Invalid YAML template produces diag warning (无效 YAML 模板产生诊断警告)."""
+    from md_mid.diagnostic import DiagCollector, DiagLevel
+
+    tpl = tmp_path / "bad.yaml"
+    tpl.write_text("{unclosed\n")
+    diag = DiagCollector("<test>")
+    d = load_template(tpl, diag=diag)
+    assert d == {}
+    warns = [d for d in diag.diagnostics if d.level == DiagLevel.WARNING]
+    assert any("template" in d.message.lower() for d in warns)
+
+
+def test_from_dict_unknown_key_info() -> None:
+    """Unknown keys produce info diagnostic (未知键产生 info 诊断)."""
+    from md_mid.diagnostic import DiagCollector, DiagLevel
+
+    diag = DiagCollector("<test>")
+    cfg = MdMidConfig.from_dict({"mode": "body", "unknown-key": "value"}, diag=diag)
+    assert cfg.mode == "body"
+    assert any(d.level == DiagLevel.INFO and "unknown-key" in d.message for d in diag.diagnostics)
+
+
 def test_config_type_error_classoptions_int() -> None:
     """classoptions as int raises TypeError (classoptions 为 int 时抛出 TypeError)."""
     with pytest.raises(TypeError, match="classoptions"):

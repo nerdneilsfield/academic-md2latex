@@ -32,3 +32,14 @@ def test_collector():
     assert dc.has_errors is True
     assert len(dc.errors) == 1
     assert len(dc.warnings) == 1
+
+
+def test_diag_phase_timing():
+    """phase() context manager records wall-clock timing (phase 上下文管理器记录计时)."""
+    from md_mid.diagnostic import DiagCollector
+
+    dc = DiagCollector("test.md")
+    with dc.phase("parse"):
+        pass  # Near-zero work (几乎无工作量)
+    assert "parse" in dc.timings
+    assert dc.timings["parse"] >= 0.0

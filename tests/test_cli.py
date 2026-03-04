@@ -405,10 +405,6 @@ def test_invalid_target_exits_before_side_effects(tmp_path: Path) -> None:
     cfg.write_text("default-target: invalid\n")
     src = tmp_path / "t.mid.md"
     src.write_text("# Hello\n\nWorld.\n")
-    # Create a dummy runner that raises on load — should NOT be reached
-    # (创建加载时抛异常的假 runner — 不应被执行)
-    runner = tmp_path / "dummy_runner.py"
-    runner.write_text("raise RuntimeError('Runner should not be loaded')\n")
     result = CliRunner().invoke(
         main,
         [
@@ -416,8 +412,6 @@ def test_invalid_target_exits_before_side_effects(tmp_path: Path) -> None:
             "--config",
             str(cfg),
             "--generate-figures",
-            "--figures-runner",
-            str(runner),
         ],
     )
     # Should exit with error mentioning "not yet implemented" (应退出并提示 "not yet implemented")
@@ -425,8 +419,11 @@ def test_invalid_target_exits_before_side_effects(tmp_path: Path) -> None:
     assert "not yet implemented" in result.output.lower()
 
 
-def test_generate_figures_flag_no_runner_exits(tmp_path: Path) -> None:
-    """--generate-figures with missing runner exits non-zero (无 runner 时退出非零)."""
+def test_generate_figures_missing_config_exits(tmp_path: Path) -> None:
+    """--generate-figures with explicit nonexistent config exits non-zero.
+
+    指定不存在的 figures-config 时退出非零。
+    """
     src = tmp_path / "t.mid.md"
     # Include a figure with AI metadata so the runner is actually needed
     # (包含 AI 元数据的图，使 runner 被实际加载)
@@ -441,14 +438,12 @@ def test_generate_figures_flag_no_runner_exits(tmp_path: Path) -> None:
             "-o",
             str(out),
             "--generate-figures",
-            "--figures-runner",
-            str(tmp_path / "nonexistent.py"),
+            "--figures-config",
+            str(tmp_path / "nonexistent.toml"),
         ],
     )
-    # Should fail because runner does not exist (runner 不存在，应失败)
+    # Should fail because config does not exist (配置不存在，应失败)
     assert result.exit_code != 0
-    # Should show friendly error, not a raw traceback (应显示友好报错，非原始 traceback)
-    assert "Runner load failed" in (result.output or "")
 
 
 # ── P1-1: TypeError from resolve_config() ─────────────────────────────────────

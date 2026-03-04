@@ -10,20 +10,21 @@ with only the keys it explicitly sets. Layers merge via dict.update().
 
 from __future__ import annotations
 
-import logging
 from dataclasses import (
     dataclass,
     field,
     fields,
 )
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from ruamel.yaml import YAML
 
-# Module-level YAML parser and logger (模块级 YAML 解析器与日志)
+if TYPE_CHECKING:
+    from md_mid.diagnostic import DiagCollector
+
+# Module-level YAML parser (模块级 YAML 解析器)
 _yaml = YAML(typ="safe")
-_log = logging.getLogger(__name__)
 
 # Type constraints for fields that renderers cast (渲染器依赖的字段类型约束)
 _LIST_FIELDS = {"classoptions", "packages"}
@@ -95,7 +96,11 @@ class MdMidConfig:
     verbose: bool = False
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> MdMidConfig:
+    def from_dict(
+        cls,
+        data: dict[str, object],
+        diag: DiagCollector | None = None,
+    ) -> MdMidConfig:
         """Build config from dict with kebab/snake key normalization (从字典构建配置).
 
         Values of list or dict type are shallow-copied to prevent aliasing
@@ -107,6 +112,7 @@ class MdMidConfig:
 
         Args:
             data: Dictionary with kebab-case or snake_case keys (键可为 kebab 或 snake)
+            diag: Optional diagnostic collector for unknown key warnings (可选诊断收集器)
 
         Returns:
             MdMidConfig with matched fields set, defaults for missing (匹配字段已设置)
@@ -115,13 +121,16 @@ class MdMidConfig:
         kwargs: dict[str, object] = {}
         for key, value in data.items():
             norm = key.replace("-", "_")
-            if norm in valid_fields:
-                # Shallow-copy mutable containers to prevent aliasing (浅拷贝可变容器防止别名)
-                if isinstance(value, list):
-                    value = list(value)
-                elif isinstance(value, dict):
-                    value = dict(value)
-                kwargs[norm] = value
+            if norm not in valid_fields:
+                if diag:
+                    diag.info(f"Unknown config key '{key}' ignored (未知配置键 '{key}' 被忽略)")
+                continue
+            # Shallow-copy mutable containers to prevent aliasing (浅拷贝可变容器防止别名)
+            if isinstance(value, list):
+                value = list(value)
+            elif isinstance(value, dict):
+                value = dict(value)
+            kwargs[norm] = value
         # Validate types for fields that renderers depend on (校验渲染器依赖的字段类型)
         for key in _LIST_FIELDS:
             if key in kwargs and not isinstance(kwargs[key], list):
@@ -200,7 +209,10 @@ def resolve_config(
     return MdMidConfig.from_dict(merged)
 
 
-def load_template(path: Path) -> dict[str, object]:
+def load_template(
+    path: Path,
+    diag: DiagCollector | None = None,
+) -> dict[str, object]:
     """Load LaTeX template from YAML file, return dict (从 YAML 文件加载 LaTeX 模板).
 
     Template keys are a subset of config (PRD §10.3):
@@ -214,6 +226,7 @@ def load_template(path: Path) -> dict[str, object]:
 
     Args:
         path: Path to template file (模板文件路径)
+        diag: Optional diagnostic collector (可选诊断收集器)
 
     Returns:
         Dict with only explicitly-set template keys (仅含显式设置键的字典)
@@ -224,8 +237,15 @@ def load_template(path: Path) -> dict[str, object]:
     try:
         with open(path, encoding="utf-8") as f:
             data = _yaml.load(f)
-    except Exception:
-        _log.warning("Failed to parse template file: %s", path)
+    except (OSError, UnicodeDecodeError) as exc:
+        msg = f"Cannot read template file: {path} ({exc})"
+        if diag:
+            diag.warning(msg)
+        return {}
+    except Exception as exc:
+        msg = f"Failed to parse template YAML: {path} ({type(exc).__name__}: {exc})"
+        if diag:
+            diag.warning(msg)
         return {}
 
     if not isinstance(data, dict):
@@ -239,7 +259,10 @@ def load_template(path: Path) -> dict[str, object]:
     return result
 
 
-def load_config_file(path: Path) -> dict[str, object]:
+def load_config_file(
+    path: Path,
+    diag: DiagCollector | None = None,
+) -> dict[str, object]:
     """Load config from YAML file, return flat dict (从 YAML 文件加载配置，返回扁平字典).
 
     Supports the nested structure from PRD §10.2:
@@ -266,6 +289,7 @@ def load_config_file(path: Path) -> dict[str, object]:
 
     Args:
         path: Path to config file (配置文件路径)
+        diag: Optional diagnostic collector (可选诊断收集器)
 
     Returns:
         Flat dict with only explicitly-set keys (仅含显式设置键的扁平字典)
@@ -276,8 +300,15 @@ def load_config_file(path: Path) -> dict[str, object]:
     try:
         with open(path, encoding="utf-8") as f:
             data = _yaml.load(f)
-    except Exception:
-        _log.warning("Failed to parse config file: %s", path)
+    except (OSError, UnicodeDecodeError) as exc:
+        msg = f"Cannot read config file: {path} ({exc})"
+        if diag:
+            diag.warning(msg)
+        return {}
+    except Exception as exc:
+        msg = f"Failed to parse config YAML: {path} ({type(exc).__name__}: {exc})"
+        if diag:
+            diag.warning(msg)
         return {}
 
     if not isinstance(data, dict):

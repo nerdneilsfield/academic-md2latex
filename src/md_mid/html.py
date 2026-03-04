@@ -10,6 +10,7 @@ import re
 from typing import cast
 
 from md_mid.ai_meta import render_ai_details_html
+from md_mid.diagnostic import DiagCollector
 from md_mid.nodes import (
     Citation,
     CodeBlock,
@@ -87,7 +88,7 @@ class HTMLRenderer:
         mode: str = "full",
         bib: dict[str, str] | None = None,
         locale: str = "zh",
-        diag: object = None,
+        diag: DiagCollector | None = None,
     ) -> None:
         self._mode = mode
         self._bib: dict[str, str] = bib or {}
@@ -198,7 +199,9 @@ class HTMLRenderer:
         handler = handlers.get(node.type)
         if handler:
             return handler(node)
-        # Unknown node: render children (未知节点：渲染子节点)
+        # Unknown node: warn and render children (未知节点：警告并渲染子节点)
+        if self._diag is not None:
+            self._diag.warning(f"Unhandled HTML node type '{node.type}' (未处理的 HTML 节点类型)")
         return self._render_children(node)
 
     def _render_children(self, node: Node) -> str:

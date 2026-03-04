@@ -11,8 +11,6 @@ from pathlib import Path
 
 import click
 
-from md_mid.comment import process_comments
-from md_mid.config import load_config_file, load_template, resolve_config
 from md_mid.diagnostic import DiagCollector
 from md_mid.nodes import (
     Citation,
@@ -22,7 +20,7 @@ from md_mid.nodes import (
     Node,
     Table,
 )
-from md_mid.parser import parse
+from md_mid.pipeline import build_config, parse_and_process, resolve_bib
 
 
 @dataclass
@@ -204,18 +202,16 @@ def validate_cmd(
     diag = DiagCollector(filename)
 
     # Parse and process comment directives (解析并处理注释指令)
-    doc = parse(text, diag=diag)
-    east = process_comments(doc, filename, diag=diag)
+    east = parse_and_process(text, filename, diag)
 
     # Optionally resolve config for metadata (可选：解析配置获取元数据)
     if config_path or template_path:
-        tpl_dict = load_template(template_path) if template_path else None
-        cfg_dict = load_config_file(config_path) if config_path else None
         try:
-            resolve_config(
-                east_meta=east.metadata,
-                config_dict=cfg_dict,
-                template_dict=tpl_dict,
+            build_config(
+                east.metadata,
+                config_path=config_path,
+                template_path=template_path,
+                diag=diag,
             )
         except TypeError as e:
             click.echo(f"Configuration error: {e}", err=True)
@@ -236,10 +232,8 @@ def validate_cmd(
                 effective_bib_path = candidate
 
     if effective_bib_path is not None:
-        from md_mid.bibtex import parse_bib
-
         try:
-            bib_entries = parse_bib(effective_bib_path.read_text(encoding="utf-8"))
+            bib_entries = resolve_bib(effective_bib_path)
         except Exception as exc:
             click.echo(f"[WARNING] Failed to parse {effective_bib_path}: {exc}", err=True)
 

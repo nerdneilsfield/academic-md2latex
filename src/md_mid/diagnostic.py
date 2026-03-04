@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import enum
+import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 
@@ -35,6 +38,7 @@ class DiagCollector:
     def __init__(self, file: str) -> None:
         self.file = file
         self.diagnostics: list[Diagnostic] = []
+        self.timings: dict[str, float] = {}  # Pipeline phase timings (管线阶段计时)
 
     def _add(self, level: DiagLevel, message: str, position: Position | None = None) -> None:
         self.diagnostics.append(Diagnostic(level, message, self.file, position))
@@ -55,6 +59,22 @@ class DiagCollector:
     @property
     def errors(self) -> list[Diagnostic]:
         return [d for d in self.diagnostics if d.level == DiagLevel.ERROR]
+
+    @contextmanager
+    def phase(self, name: str) -> Iterator[None]:
+        """Time a pipeline phase (计时管线阶段).
+
+        Args:
+            name: Phase name for timing record (阶段名称)
+
+        Yields:
+            None
+        """
+        start = time.perf_counter()
+        try:
+            yield
+        finally:
+            self.timings[name] = time.perf_counter() - start
 
     @property
     def warnings(self) -> list[Diagnostic]:

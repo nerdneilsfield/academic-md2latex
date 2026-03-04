@@ -8,16 +8,20 @@ for programmatic use from Python code (build systems, Jupyter, web services).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
-from md_mid.bibtex import parse_bib
-from md_mid.comment import process_comments
-from md_mid.config import MdMidConfig, load_template, resolve_config
-from md_mid.diagnostic import DiagCollector, Diagnostic  # noqa: F401 (re-exported)
+from md_mid.config import MdMidConfig
+from md_mid.diagnostic import DiagCollector, Diagnostic
 from md_mid.nodes import Document
-from md_mid.parser import parse
-from md_mid.validate import collect_east_info, validate_bib, validate_crossrefs
+from md_mid.pipeline import (
+    build_config,
+    create_renderer,
+    inject_metadata,
+    parse_and_process,
+    resolve_bib,
+)
+from md_mid.validate import collect_east_info, validate_bib, validate_crossrefs, validate_images
 
 # -- Result / Error types (结果/错误类型) ------------------------------------
 
@@ -31,12 +35,14 @@ class ConvertResult:
         diagnostics: List of diagnostic messages (诊断信息列表)
         config: Resolved configuration used (解析后的配置)
         document: EAST document tree for further inspection (EAST 文档树)
+        timings: Pipeline phase timings (管线阶段计时)
     """
 
     text: str
     diagnostics: list[Diagnostic]
     config: MdMidConfig
     document: Document
+    timings: dict[str, float] = field(default_factory=dict)  # Phase timings (阶段计时)
 
 
 class ConversionError(Exception):
@@ -68,125 +74,13 @@ def _read_source(source: str | Path) -> tuple[str, str]:
     return source, "<string>"
 
 
-def _resolve_bib(
-    bib: Path | str | dict[str, str] | None,
-) -> dict[str, str]:
-    """Normalise bib input to parsed dict (将 bib 输入归一化为解析后的字典).
-
-    Args:
-        bib: .bib file path / raw text / pre-parsed dict / None
-             (.bib 文件路径 / 原始文本 / 预解析字典 / None)
-
-    Returns:
-        Parsed bibliography dict (解析后的参考文献字典)
-    """
-    if bib is None:
-        return {}
-    if isinstance(bib, dict):
-        return bib
-    if isinstance(bib, Path):
-        return parse_bib(bib.read_text(encoding="utf-8"))
-    # str — treat as raw .bib text (字符串视为原始 .bib 文本)
-    return parse_bib(bib)
-
-
-def _render(
-    east: Document,
-    cfg: MdMidConfig,
-    target: str,
-    bib: dict[str, str],
-    diag: DiagCollector,
-) -> str:
-    """Dispatch to the correct renderer (分派到正确的渲染器).
-
-    Args:
-        east: EAST document tree (EAST 文档树)
-        cfg: Resolved configuration (解析后的配置)
-        target: Output format (输出格式)
-        bib: Parsed bibliography (解析后的参考文献)
-        diag: Diagnostic collector (诊断收集器)
-
-    Returns:
-        Rendered text (渲染后的文本)
-
-    Raises:
-        ValueError: If target is not supported (目标格式不受支持时)
-    """
-    if target == "latex":
-        from md_mid.latex import LaTeXRenderer
-
-        # Inject config metadata into EAST for renderer (注入配置元数据供渲染器使用)
-        east.metadata.update(
-            {
-                "documentclass": cfg.documentclass,
-                "classoptions": cfg.classoptions,
-                "packages": cfg.packages,
-                "package_options": cfg.package_options,
-                "bibliography": cfg.bibliography,
-                "bibstyle": cfg.bibstyle,
-                "preamble": cfg.preamble,
-                "bibliography_mode": cfg.bibliography_mode,
-                "title": cfg.title,
-                "author": cfg.author,
-                "date": cfg.date,
-                "abstract": cfg.abstract,
-            }
-        )
-        renderer = LaTeXRenderer(
-            mode=cfg.mode,
-            ref_tilde=cfg.ref_tilde,
-            code_style=cfg.code_style,
-            thematic_break=cfg.thematic_break,
-            locale=cfg.locale,
-            diag=diag,
-        )
-        return renderer.render(east)
-
-    if target == "markdown":
-        from md_mid.markdown import MarkdownRenderer
-
-        renderer_md = MarkdownRenderer(
-            bib=bib,
-            heading_id_style=cfg.heading_id_style,
-            locale=cfg.locale,
-            mode=cfg.mode,
-            diag=diag,
-        )
-        return renderer_md.render(east)
-
-    if target == "html":
-        from md_mid.html import HTMLRenderer
-
-        # Inject document metadata for HTML renderer (注入文档元数据供 HTML 渲染器使用)
-        east.metadata.update(
-            {
-                "title": cfg.title,
-                "author": cfg.author,
-                "date": cfg.date,
-                "abstract": cfg.abstract,
-            }
-        )
-        renderer_html = HTMLRenderer(
-            mode=cfg.mode,
-            bib=bib,
-            locale=cfg.locale,
-            diag=diag,
-        )
-        return renderer_html.render(east)
-
-    raise ValueError(
-        f"Unsupported target: {target!r}, must be 'latex', 'markdown', or 'html'"
-        f" (不支持的目标格式: {target!r})"
-    )
-
-
 # -- Public API (公共 API) ---------------------------------------------------
 
 
 def convert(
     source: str | Path,
     *,
-    target: str = "latex",
+    target: str | None = None,
     mode: str | None = None,
     locale: str | None = None,
     config: MdMidConfig | dict[str, object] | None = None,
@@ -215,8 +109,8 @@ def convert(
         ConversionError: If strict=True and diagnostics contain errors (严格模式下有错误时)
         ValueError: If target is not supported (目标格式不支持时)
     """
-    # Validate target early (提前校验目标格式)
-    if target not in ("latex", "markdown", "html"):
+    # Validate explicit target early (提前校验显式目标格式)
+    if target is not None and target not in ("latex", "markdown", "html"):
         raise ValueError(
             f"Unsupported target: {target!r}, must be 'latex', 'markdown', or 'html'"
             f" (不支持的目标格式: {target!r})"
@@ -226,36 +120,42 @@ def convert(
     diag = DiagCollector(filename)
 
     # Parse and process comment directives (解析并处理注释指令)
-    doc = parse(text, diag=diag)
-    east = process_comments(doc, filename, diag=diag)
+    east = parse_and_process(text, filename, diag)
 
     # Resolve configuration (解析配置)
-    if isinstance(config, MdMidConfig):
-        cfg = config
-    else:
-        # Build CLI-style override dict from kwargs (从参数构建覆盖字典)
-        cli_dict: dict[str, object] = {}
-        if mode is not None:
-            cli_dict["mode"] = mode
-        if locale is not None:
-            cli_dict["locale"] = locale
-        if target != "latex":
-            cli_dict["target"] = target
+    # Build CLI-style override dict: config dict first, then explicit kwargs on top
+    # (构建覆盖字典：先合并配置字典，再用显式参数覆盖)
+    cli_dict: dict[str, object] = {}
+    if isinstance(config, dict):
+        cli_dict.update(config)
+    # Explicit kwargs take precedence over config dict (显式参数优先于配置字典)
+    if mode is not None:
+        cli_dict["mode"] = mode
+    if locale is not None:
+        cli_dict["locale"] = locale
+    if target is not None:
+        cli_dict["target"] = target
 
-        # If config is a dict, merge it into cli_dict (字典配置合并到覆盖字典)
-        if isinstance(config, dict):
-            cli_dict.update(config)
+    cfg = build_config(
+        east.metadata,
+        cli_overrides=cli_dict if cli_dict else None,
+        template_path=template,
+        pre_built=config if isinstance(config, MdMidConfig) else None,
+    )
 
-        tpl_dict = load_template(template) if template else None
+    # Use resolved target from config — dict/MdMidConfig may override the default
+    # (使用配置中解析后的目标格式 — 字典/MdMidConfig 可能覆盖默认值)
+    effective_target = cfg.target
 
-        cfg = resolve_config(
-            cli_overrides=cli_dict if cli_dict else None,
-            east_meta=east.metadata,
-            template_dict=tpl_dict,
+    # Validate resolved target (校验解析后的目标格式)
+    if effective_target not in ("latex", "markdown", "html"):
+        raise ValueError(
+            f"Unsupported target: {effective_target!r}, must be 'latex', 'markdown', or 'html'"
+            f" (不支持的目标格式: {effective_target!r})"
         )
 
     # Resolve bibliography (解析参考文献)
-    bib_entries = _resolve_bib(bib)
+    bib_entries = resolve_bib(bib)
 
     # Strict-mode check before rendering (渲染前的严格模式检查)
     if strict and diag.has_errors:
@@ -264,8 +164,11 @@ def convert(
             diagnostics=list(diag.diagnostics),
         )
 
-    # Render (渲染)
-    rendered = _render(east, cfg, target, bib_entries, diag)
+    # Inject metadata and render (注入元数据并渲染)
+    inject_metadata(east, cfg, effective_target)
+    renderer = create_renderer(effective_target, cfg, bib_entries, diag)
+    with diag.phase("render"):
+        rendered: str = renderer.render(east)
 
     # Post-render strict check (渲染后的严格模式检查)
     if strict and diag.has_errors:
@@ -279,6 +182,7 @@ def convert(
         diagnostics=list(diag.diagnostics),
         config=cfg,
         document=east,
+        timings=dict(diag.timings),
     )
 
 
@@ -310,17 +214,20 @@ def validate_text(
     diag = DiagCollector(filename)
 
     # Parse and process (解析并处理)
-    doc = parse(text, diag=diag)
-    east = process_comments(doc, filename, diag=diag)
+    east = parse_and_process(text, filename, diag)
 
     # Collect EAST info (收集 EAST 信息)
     info = collect_east_info(east)
 
     # Resolve bib and validate (解析参考文献并验证)
-    bib_entries = _resolve_bib(bib)
+    bib_entries = resolve_bib(bib)
     if bib_entries or info.cite_keys:
         validate_bib(info, bib_entries, diag)
     validate_crossrefs(info, diag)
+
+    # Validate images when source is a file path (文件路径时验证图片)
+    if isinstance(source, Path):
+        validate_images(info, source.parent, diag)
 
     if strict and diag.has_errors:
         raise ConversionError(
@@ -349,8 +256,7 @@ def format_text(source: str | Path) -> str:
     text, filename = _read_source(source)
     diag = DiagCollector(filename)
 
-    doc = parse(text, diag=diag)
-    east = process_comments(doc, filename, diag=diag)
+    east = parse_and_process(text, filename, diag)
     renderer = MarkdownRenderer(mode="full", diag=diag)
     return renderer.render(east)
 
@@ -372,6 +278,4 @@ def parse_document(source: str | Path) -> Document:
     """
     text, filename = _read_source(source)
     diag = DiagCollector(filename)
-
-    doc = parse(text, diag=diag)
-    return process_comments(doc, filename, diag=diag)
+    return parse_and_process(text, filename, diag)

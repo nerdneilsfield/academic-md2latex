@@ -25,7 +25,6 @@ from md_mid.diagnostic import DiagLevel
 
 FIXTURES = Path(__file__).parent / "fixtures"
 MINIMAL_MD = FIXTURES / "minimal.mid.md"
-CITE_REF_MD = FIXTURES / "cite_ref.mid.md"
 
 SIMPLE_MD = "# Hello\n\nWorld.\n"
 
@@ -154,6 +153,31 @@ def test_convert_invalid_target() -> None:
         convert(SIMPLE_MD, target="pdf")
 
 
+def test_convert_target_from_config_dict() -> None:
+    """Target in config dict overrides the default (配置字典中的 target 覆盖默认值)."""
+    result = convert(SIMPLE_MD, config={"target": "html"})
+    # Should render HTML, not LaTeX (应渲染 HTML 而非 LaTeX)
+    assert "\\documentclass" not in result.text
+    assert result.config.target == "html"
+
+
+def test_convert_target_from_config_object() -> None:
+    """Target from MdMidConfig object is respected (MdMidConfig 对象的 target 被使用)."""
+    cfg = MdMidConfig(target="markdown", mode="full")
+    result = convert(SIMPLE_MD, config=cfg)
+    # Should render Markdown, not LaTeX (应渲染 Markdown 而非 LaTeX)
+    assert "\\documentclass" not in result.text
+    assert result.config.target == "markdown"
+
+
+def test_convert_explicit_target_beats_config_dict() -> None:
+    """Explicit target= beats config dict (显式 target 参数优先于配置字典)."""
+    result = convert(SIMPLE_MD, target="html", config={"target": "markdown"})
+    # Explicit target="html" wins — config dict "markdown" is overridden
+    # (显式 target="html" 优先 — 配置字典的 "markdown" 被覆盖)
+    assert result.config.target == "html"
+
+
 # -- validate_text() tests (validate_text 函数测试) --------------------------
 
 
@@ -179,6 +203,25 @@ def test_validate_text_strict_raises() -> None:
     md = "<!-- begin: figure -->\nHello\n"
     with pytest.raises(ConversionError):
         validate_text(md, strict=True)
+
+
+def test_validate_text_missing_image(tmp_path: Path) -> None:
+    """Path source with missing local image produces diagnostic (路径源缺失本地图片产生诊断)."""
+    md_file = tmp_path / "doc.mid.md"
+    md_file.write_text("![Alt](missing.png)\n", encoding="utf-8")
+    diags = validate_text(md_file)
+    # Should report missing image file (应报告缺失的图片文件)
+    assert any("missing" in d.message.lower() for d in diags)
+
+
+def test_validate_text_url_image_no_warning(tmp_path: Path) -> None:
+    """URL images are not flagged as missing (URL 图片不被标记为缺失)."""
+    md_file = tmp_path / "doc.mid.md"
+    md_file.write_text("![Alt](https://example.com/img.png)\n", encoding="utf-8")
+    diags = validate_text(md_file)
+    # URL images should not produce missing-file warnings (URL 图片不应产生文件缺失警告)
+    image_diags = [d for d in diags if "img.png" in d.message]
+    assert len(image_diags) == 0
 
 
 # -- format_text() tests (format_text 函数测试) ------------------------------
@@ -215,3 +258,30 @@ def test_parse_document_from_path() -> None:
     doc = parse_document(MINIMAL_MD)
     assert isinstance(doc, Document)
     assert len(doc.children) > 0
+
+
+# -- Regression: target=None defaults correctly (target=None 默认正确) --------
+
+
+def test_convert_target_none_defaults_to_latex() -> None:
+    """target=None falls through to config default 'latex' (target=None 回退到默认 latex)."""
+    result = convert(SIMPLE_MD)
+    assert "\\documentclass" in result.text
+
+
+def test_convert_explicit_target_latex_overrides_config() -> None:
+    """Explicit target='latex' overrides config target (显式 target='latex' 覆盖配置)."""
+    result = convert(SIMPLE_MD, target="latex", config={"target": "html"})
+    # Explicit arg wins — should produce LaTeX not HTML (显式参数优先)
+    assert "\\documentclass" in result.text
+
+
+# -- Regression: include-tex blocked for string sources (字符串源禁用 include-tex)
+
+
+def test_include_tex_blocked_for_string_source() -> None:
+    """include-tex is silently ignored for non-file sources (非文件源静默忽略 include-tex)."""
+    md = "<!-- include-tex: nonexistent.tex -->\n\n# Hello\n"
+    # Should NOT produce an error — include-tex is simply skipped (不应报错)
+    result = convert(md)
+    assert result.text  # Renders normally (正常渲染)

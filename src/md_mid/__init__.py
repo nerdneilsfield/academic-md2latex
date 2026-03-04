@@ -13,6 +13,8 @@ from md_mid.api import (
 )
 from md_mid.config import MdMidConfig
 from md_mid.diagnostic import Diagnostic
+from md_mid.genfig import FigureRunner
+from md_mid.genfig_openai import OpenAIFigureRunner
 from md_mid.nodes import Document
 
 __version__ = "0.1.0"
@@ -28,4 +30,6 @@ __all__ = [
     "MdMidConfig",
     "Diagnostic",
     "Document",
+    "FigureRunner",
+    "OpenAIFigureRunner",
 ]
