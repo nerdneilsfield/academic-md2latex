@@ -1,8 +1,8 @@
-# Project Memory — academic-md2latex
+# Project Memory — wenqiao
 
 ## Project Overview
-- **Repo**: academic-md2latex / CLI tool: `md-mid`
-- **Format**: md-mid (Markdown-based academic writing intermediate format)
+- **Repo**: wenqiao / CLI tool: `wenqiao`
+- **Format**: Wenqiao MID Markdown (文桥中间稿)
 - **Stack**: Python 3.14, markdown-it-py, ruamel.yaml, click, pytest, uv, ruff, mypy
 
 ## Phase Status
@@ -26,7 +26,7 @@ Final test count: **241 tests**, make check clean (ruff 0, mypy 0).
 
 ## Architecture Notes
 
-### EAST Node Types (src/md_mid/nodes.py)
+### EAST Node Types (src/wenqiao/nodes.py)
 - `Table.headers: list[CellContent]` where `CellContent = list[Node]`
 - `Table.rows: list[TableRow]` where `TableRow = list[CellContent]`
 - `Table.to_dict()` overridden to serialize nested node lists
@@ -67,7 +67,7 @@ def __init__(
 make test       # uv run pytest -v --tb=short
 make check      # ruff + mypy + pytest
 make lint       # ruff check
-make typecheck  # mypy src/md_mid/
+make typecheck  # mypy src/wenqiao/
 ```
 
 ## Claude Flow V3 Swarm Pattern (used for Phase 3)

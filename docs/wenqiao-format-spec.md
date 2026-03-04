@@ -1,6 +1,6 @@
 # `.mid.md` Format Specification / `.mid.md` 格式规范
 
-> Version 1.0 — md-mid: Academic Markdown Intermediate Format
+> Version 1.0 — Wenqiao (文桥): Academic Markdown Intermediate Format
 
 ## Overview / 概述
 

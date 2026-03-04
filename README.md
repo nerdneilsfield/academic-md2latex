@@ -1,4 +1,4 @@
-# md-mid
+# 文桥 · Wenqiao
 
 [![Python](https://img.shields.io/badge/Python-≥3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -11,16 +11,29 @@
 
 ---
 
+> **Write once, render anywhere.**  
+> *One manuscript, many outputs.*
+
 **Academic Writing Intermediate Format & Multi-target Conversion Tool**
 
-md-mid defines a Markdown-based intermediate format (`.mid.md`) for academic writing.
+Academic writing suffers not from deep thought, but from format entanglement.  
+Lost in the forest of `.tex` brackets, wandering in the maze of `\begin{} \end{}`,  
+you yearn for Markdown's simplicity, yet citations, cross-references, and figure labels  
+exile you to the wilderness.
+
+**Wenqiao** is a bridge:  
+> One end connects your thoughts (Markdown's purity),  
+> the other end connects the world's rules (LaTeX's rigor, HTML's openness, rich text's friendliness).  
+> You simply stand at the center, writing a manuscript called `.mid.md`.
+
+Wenqiao defines a Markdown-based intermediate format (`.mid.md`) for academic writing.
 Write your paper once in plain Markdown with metadata encoded in HTML comments, then
 convert to **LaTeX**, **rich Markdown**, or **self-contained HTML** — all from a single
 source file.
 
 ```mermaid
 graph LR
-    A["paper.mid.md"] --> B["md-mid"]
+    A["paper.mid.md"] --> B["wenqiao"]
     B --> C["paper.tex"]
     B --> D["paper.html"]
     B --> E["paper.md"]
@@ -105,8 +118,8 @@ All nodes extend a base `Node` class with `children`, `metadata`, and `position`
 ### Installation
 
 ```bash
-git clone https://github.com/<owner>/academic-md2latex.git
-cd academic-md2latex
+git clone https://github.com/<owner>/wenqiao.git
+cd wenqiao
 uv sync
 ```
 
@@ -114,39 +127,39 @@ uv sync
 
 ```bash
 # Markdown → LaTeX (default)
-md-mid paper.mid.md -o paper.tex
+wenqiao paper.mid.md -o paper.tex
 
 # Explicit convert subcommand (same as above)
-md-mid convert paper.mid.md -o paper.tex
+wenqiao convert paper.mid.md -o paper.tex
 
 # Markdown → HTML with MathJax
-md-mid paper.mid.md -o paper.html -t html
+wenqiao paper.mid.md -o paper.html -t html
 
 # Markdown → Rich Markdown
-md-mid paper.mid.md -o paper.md -t markdown
+wenqiao paper.mid.md -o paper.md -t markdown
 
 # Validate citations, cross-references, and images
-md-mid validate paper.mid.md --bib refs.bib --strict
+wenqiao validate paper.mid.md --bib refs.bib --strict
 
 # Check formatting (exit 1 if unformatted)
-md-mid format paper.mid.md --check --diff
+wenqiao format paper.mid.md --check --diff
 
 # Read from stdin, body-only mode
-cat paper.mid.md | md-mid - --mode body -o paper.tex
+cat paper.mid.md | wenqiao - --mode body -o paper.tex
 
 # Dump the Enhanced AST for debugging
-md-mid paper.mid.md --dump-east | jq .
+wenqiao paper.mid.md --dump-east | jq .
 ```
 
 <details>
 <summary><b>Full CLI Reference</b></summary>
 
-md-mid uses subcommands: `convert` (default), `validate`, and `format`.
-The `convert` subcommand is implicit — `md-mid file.mid.md` is equivalent to
-`md-mid convert file.mid.md`.
+Wenqiao uses subcommands: `convert` (default), `validate`, and `format`.
+The `convert` subcommand is implicit — `wenqiao file.mid.md` is equivalent to
+`wenqiao convert file.mid.md`.
 
 ```
-Usage: md-mid [OPTIONS] COMMAND [ARGS]...
+Usage: wenqiao [OPTIONS] COMMAND [ARGS]...
 
 Commands:
   convert   Convert academic Markdown to LaTeX/Markdown/HTML (default)
@@ -156,13 +169,13 @@ Commands:
 
 **convert** (default):
 ```
-Usage: md-mid convert [OPTIONS] INPUT
+Usage: wenqiao convert [OPTIONS] INPUT
 
 Options:
   -o, --output PATH                   Output file (stdout if omitted)
   -t, --target [latex|markdown|html]  Output format (default: latex)
   --mode [full|body|fragment]         Output scope (default: full)
-  --config PATH                       Config file (md-mid.yaml)
+  --config PATH                       Config file (wenqiao.yaml)
   --template PATH                     LaTeX template (.yaml)
   --bib PATH                          Bibliography file (.bib)
   --bibliography-mode MODE            auto | standalone | external | none
@@ -178,11 +191,11 @@ Options:
 
 **validate**:
 ```
-Usage: md-mid validate [OPTIONS] INPUT
+Usage: wenqiao validate [OPTIONS] INPUT
 
 Options:
   --bib PATH       BibTeX file for citation validation
-  --config PATH    External config file (md-mid.yaml)
+  --config PATH    External config file (wenqiao.yaml)
   --template PATH  LaTeX template file (.yaml)
   --strict         Exit 1 on any diagnostic warnings
   --verbose        Show all diagnostics
@@ -190,7 +203,7 @@ Options:
 
 **format**:
 ```
-Usage: md-mid format [OPTIONS] INPUT
+Usage: wenqiao format [OPTIONS] INPUT
 
 Options:
   -o, --output PATH  Output path (default: overwrite input)
@@ -202,13 +215,13 @@ Options:
 
 ## Python API
 
-md-mid exposes a clean Python API for programmatic use in build systems, Jupyter
+Wenqiao exposes a clean Python API for programmatic use in build systems, Jupyter
 notebooks, web services, and custom tooling. All public symbols are available
-directly from the `md_mid` package.
+directly from the `wenqiao` package.
 
 ```python
-from md_mid import convert, validate_text, format_text, parse_document
-from md_mid import ConvertResult, ConversionError, MdMidConfig, Diagnostic, Document
+from wenqiao import convert, validate_text, format_text, parse_document
+from wenqiao import ConvertResult, ConversionError, WenqiaoConfig, Diagnostic, Document
 ```
 
 ### `convert()` — Convert Academic Markdown
@@ -216,12 +229,12 @@ from md_mid import ConvertResult, ConversionError, MdMidConfig, Diagnostic, Docu
 The primary entry point. Converts Markdown source to LaTeX, HTML, or rich Markdown.
 
 ```python
-from md_mid import convert
+from wenqiao import convert
 
 # Basic: string → LaTeX
 result = convert("# Introduction\n\nHello world.\n")
 print(result.text)       # \documentclass[12pt,a4paper]{article} ...
-print(result.config)     # MdMidConfig(target='latex', mode='full', ...)
+print(result.config)     # WenqiaoConfig(target='latex', mode='full', ...)
 print(result.document)   # Document(children=[Heading(...), Paragraph(...)])
 print(result.diagnostics)  # [] (empty if no warnings/errors)
 ```
@@ -234,7 +247,7 @@ print(result.diagnostics)  # [] (empty if no warnings/errors)
 | `target` | `str` | `"latex"` | Output format: `"latex"` / `"markdown"` / `"html"` |
 | `mode` | `str \| None` | `None` | Output scope: `"full"` / `"body"` / `"fragment"` |
 | `locale` | `str \| None` | `None` | Label language: `"zh"` / `"en"` |
-| `config` | `MdMidConfig \| dict \| None` | `None` | Pre-built config object or overrides dict |
+| `config` | `WenqiaoConfig \| dict \| None` | `None` | Pre-built config object or overrides dict |
 | `template` | `Path \| None` | `None` | Template YAML file path |
 | `bib` | `Path \| str \| dict \| None` | `None` | `.bib` file path, raw text, or pre-parsed dict |
 | `strict` | `bool` | `False` | Raise `ConversionError` on diagnostic errors |
@@ -281,7 +294,7 @@ result = convert(Path("paper.mid.md"), target="html")
 Three ways to pass configuration:
 
 ```python
-from md_mid import convert, MdMidConfig
+from wenqiao import convert, WenqiaoConfig
 from pathlib import Path
 
 # 1. Dict overrides — merged with defaults
@@ -291,8 +304,8 @@ result = convert(source, config={
     "locale": "en",
 })
 
-# 2. Pre-built MdMidConfig — used as-is, no merging
-cfg = MdMidConfig(mode="body", locale="en", documentclass="IEEEtran")
+# 2. Pre-built WenqiaoConfig — used as-is, no merging
+cfg = WenqiaoConfig(mode="body", locale="en", documentclass="IEEEtran")
 result = convert(source, config=cfg)
 
 # 3. Template YAML file — merged at the template layer
@@ -320,7 +333,7 @@ result = convert(md, target="markdown", bib={"wang2024": "Wang. Test. 2024."})
 #### Strict mode
 
 ```python
-from md_mid import convert, ConversionError
+from wenqiao import convert, ConversionError
 
 try:
     result = convert(source, strict=True)
@@ -336,7 +349,7 @@ Runs the EAST walker and validators to check citations, cross-references, and mo
 Returns a list of `Diagnostic` objects.
 
 ```python
-from md_mid import validate_text
+from wenqiao import validate_text
 
 # Basic validation
 diagnostics = validate_text("See [ref](cite:missing_key).\n", bib={})
@@ -347,7 +360,7 @@ for d in diagnostics:
 diagnostics = validate_text(Path("paper.mid.md"), bib=Path("refs.bib"))
 
 # Strict mode — raises ConversionError on any errors
-from md_mid import ConversionError
+from wenqiao import ConversionError
 try:
     validate_text(source, strict=True)
 except ConversionError as e:
@@ -360,7 +373,7 @@ Round-trip normalization: parse → render back as Markdown. Idempotent — form
 an already-formatted document returns the same text.
 
 ```python
-from md_mid import format_text
+from wenqiao import format_text
 
 formatted = format_text("# Hello\n\nWorld.\n")
 print(formatted)
@@ -378,8 +391,8 @@ Returns the raw EAST `Document` tree for custom processing. Runs parse +
 comment directive processing but no rendering.
 
 ```python
-from md_mid import parse_document, Document
-from md_mid.nodes import Heading, Paragraph
+from wenqiao import parse_document, Document
+from wenqiao.nodes import Heading, Paragraph
 
 doc = parse_document("# Hello\n\nWorld.\n")
 assert isinstance(doc, Document)
@@ -405,7 +418,7 @@ print(doc.metadata)  # {'title': 'My Paper', 'author': 'Author'}
 class ConvertResult:
     text: str                    # Rendered output string
     diagnostics: list[Diagnostic]  # Warnings and errors
-    config: MdMidConfig          # Resolved configuration
+    config: WenqiaoConfig          # Resolved configuration
     document: Document           # EAST tree (for inspection)
 ```
 
@@ -424,7 +437,7 @@ class ConversionError(Exception):
 <summary><b>Jupyter Notebook</b></summary>
 
 ```python
-from md_mid import convert
+from wenqiao import convert
 from IPython.display import HTML
 
 source = Path("paper.mid.md").read_text()
@@ -441,7 +454,7 @@ HTML(result.text)
 #!/usr/bin/env python3
 """Batch convert all .mid.md files to LaTeX."""
 from pathlib import Path
-from md_mid import convert
+from wenqiao import convert
 
 for md_file in Path("chapters/").glob("*.mid.md"):
     result = convert(md_file, template=Path("templates/ieee.yaml"))
@@ -457,7 +470,7 @@ for md_file in Path("chapters/").glob("*.mid.md"):
 
 ```python
 from fastapi import FastAPI, HTTPException
-from md_mid import convert, ConversionError
+from wenqiao import convert, ConversionError
 
 app = FastAPI()
 
@@ -476,8 +489,8 @@ def convert_markdown(source: str, target: str = "latex"):
 <summary><b>Custom EAST processing</b></summary>
 
 ```python
-from md_mid import parse_document
-from md_mid.nodes import Heading, Citation
+from wenqiao import parse_document
+from wenqiao.nodes import Heading, Citation
 
 doc = parse_document(Path("paper.mid.md"))
 
@@ -506,7 +519,7 @@ print(f"Found {len(all_keys)} unique citation keys")
 
 ## Document Format
 
-md-mid documents are standard Markdown files with the `.mid.md` extension. All academic
+Wenqiao documents are standard Markdown files with the `.mid.md` extension. All academic
 metadata is encoded in **HTML comments** (`<!-- key: value -->`), so the source is readable
 in any Markdown viewer while carrying full LaTeX semantics.
 
@@ -567,7 +580,7 @@ Classical methods [1](citep:fischler1981) have limitations.
 As [Smith](citeauthor:smith2023) demonstrated ...
 ```
 
-| md-mid Syntax | LaTeX Output | HTML Output |
+| wenqiao Syntax | LaTeX Output | HTML Output |
 |---------------|-------------|-------------|
 | `[text](cite:key)` | `\cite{key}` | `<sup><a href="#cite-key">[1]</a></sup>` |
 | `[text](citep:key)` | `\citep{key}` | `<sup><a href="#cite-key">[1]</a></sup>` |
@@ -668,7 +681,7 @@ as a collapsible `<details>` block.
 Use `--generate-figures` to automatically generate images from prompts:
 
 ```bash
-md-mid paper.mid.md -o paper.tex \
+wenqiao paper.mid.md -o paper.tex \
   --generate-figures \
   --figures-config api.toml
 ```
@@ -778,7 +791,7 @@ complete demonstration of all features.
 flowchart LR
     CLI["CLI flags"] --> R["Resolver"]
     DIR["In-document<br/>directives"] --> R
-    CFG["Config file<br/><code>md-mid.yaml</code>"] --> R
+    CFG["Config file<br/><code>wenqiao.yaml</code>"] --> R
     TPL["Template<br/><code>ieee.yaml</code>"] --> R
     DEF["Built-in<br/>defaults"] --> R
     R --> OUT["Final Config"]
@@ -794,7 +807,7 @@ Priority: **CLI > directives > config file > template > defaults**. Higher layer
 lower layers. This lets you set venue defaults in a template, override per-paper in the
 config file, and fine-tune per-build on the command line.
 
-### Config File (`md-mid.yaml`)
+### Config File (`wenqiao.yaml`)
 
 ```yaml
 documentclass: article
@@ -852,14 +865,14 @@ bibstyle: IEEEtran
 ```
 
 ```bash
-md-mid paper.mid.md --template templates/ieee.yaml -o paper.tex
+wenqiao paper.mid.md --template templates/ieee.yaml -o paper.tex
 ```
 
 ## Project Structure
 
 ```
-academic-md2latex/
-├── src/md_mid/              # Source code (17 modules)
+wenqiao/
+├── src/wenqiao/              # Source code (17 modules)
 │   ├── __init__.py          #   Public API re-exports
 │   ├── api.py               #   Public Python API (convert, validate, format)
 │   ├── cli.py               #   Click CLI entry point
