@@ -551,6 +551,15 @@ print(f"共找到 {len(all_keys)} 个唯一引用键")
 -->
 ```
 
+**`package-options`** 用于向单个宏包传递选项：
+
+```markdown
+<!-- packages: [amsmath, graphicx, geometry] -->
+<!-- package-options: {geometry: "margin=1in,top=2cm"} -->
+```
+
+这会生成 `\usepackage[margin=1in,top=2cm]{geometry}`。值将原样填入 `\usepackage[...]{pkg}`。
+
 <details>
 <summary><b>生成的 LaTeX 导言区</b></summary>
 
@@ -727,6 +736,28 @@ RANSAC & 2.3 & 150 & CPU \\
 ```
 
 </details>
+
+**复杂表格**（合并单元格、`booktabs`、`multicolumn`）可使用原始 LaTeX 透传块：
+
+```markdown
+<!-- begin: raw -->
+\begin{table}[htbp]
+\centering
+\caption{多列结果对比}
+\label{tab:complex}
+\begin{tabular}{lcc}
+\hline
+\multicolumn{2}{c}{性能指标} & 得分 \\
+\hline
+ICP   & 85.3 & RMSE \\
+本文  & 93.1 & RMSE \\
+\hline
+\end{tabular}
+\end{table}
+<!-- end: raw -->
+```
+
+在 `packages` 中添加 `booktabs` 即可使用 `\toprule`、`\midrule`、`\bottomrule`。
 
 ### 数学公式
 
@@ -1043,6 +1074,35 @@ ln -s "$(pwd)/skills/wenqiao-writer" ~/.claude/skills/wenqiao-writer
 
 > 写一篇关于基于 FPGA 加速的点云配准方法的 `.mid.md` 论文草稿。
 > 包含摘要、3 个章节、1 个对比表格和 2 张带 AI 生成提示的图片。
+
+## 内置预设
+
+预设以一行配置提供常见文档类型的起始设置：
+
+```markdown
+<!-- preset: zh -->
+<!-- title: 我的论文 -->
+```
+
+| 预设  | `documentclass` | `locale` | 适用场景 |
+|-------|-----------------|----------|----------|
+| `zh`  | `ctexart`       | `zh`     | 中文学术论文 — 需用 XeLaTeX 编译 |
+| `en`  | `article`       | `en`     | 标准英文论文 |
+
+所有文档指令均可覆盖预设：
+
+```markdown
+<!-- preset: zh -->
+<!-- documentclass: IEEEtran -->   <!-- 覆盖 ctexart -->
+```
+
+**通过 CLI 使用：**
+
+```bash
+wenqiao paper.mid.md --preset zh -o paper.tex
+```
+
+**优先级链：** `CLI > 行内指令 > 配置文件 > 模板 > 预设 > 默认值`
 
 ## 贡献指南
 
