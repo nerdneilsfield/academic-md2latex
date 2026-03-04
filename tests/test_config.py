@@ -248,6 +248,7 @@ class TestPresets:
         cfg = resolve_config(preset_name="zh")
         assert cfg.documentclass == "ctexart"
         assert cfg.locale == "zh"
+        assert "hyperref" in cfg.packages
 
     def test_en_preset_sets_locale_en(self) -> None:
         """en preset locale should be en (en 预设的 locale 应为 en)."""

@@ -224,7 +224,7 @@ def resolve_config(
         # Deep-copy list values to prevent aliasing (深拷贝列表防止别名)
         for key in _LIST_FIELDS:
             if key in merged and isinstance(merged[key], list):
-                merged[key] = list(merged[key])
+                merged[key] = list(cast(list[object], merged[key]))
 
     # Layer template (层: 模板)
     if template_dict:
