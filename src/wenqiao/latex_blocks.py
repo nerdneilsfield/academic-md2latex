@@ -295,18 +295,28 @@ class LaTeXBlockMixin:
         # text tables read better left-aligned; right is kept for numeric columns.
         # (列对齐格式：center 映射为 l，学术文本列居左更清晰；右对齐保留给数字列)
         align_map = {"left": "l", "right": "r", "center": "l"}
+        n_cols = max(len(tbl.headers), 1)
         col_spec = "".join(align_map.get(a, "l") for a in tbl.alignments)
         if not col_spec:
-            col_spec = "l" * len(tbl.headers)
+            col_spec = "l" * n_cols
+
+        # Dynamic wrap threshold: each column gets at most text_width // n_cols
+        # display chars per line. This ensures that wrapping alone can absorb the
+        # full page width, so \scalebox is only needed for residual overflow.
+        # Minimum 16 chars to keep cells readable; fixed constant is the fallback
+        # for narrow tables that don't need per-column tightening.
+        # (动态换行阈值：按列数等分页宽，让换行而非 scalebox 控制整体宽度)
+        per_col_wrap = max(16, self._TABLE_TEXT_WIDTH_CHARS // n_cols)
+        cell_wrap = min(per_col_wrap, self._TABLE_CELL_WRAP_CHARS)
 
         # Step 1: Render and wrap all cells first so that the subsequent width
         # estimation reflects the actual line-broken content, not the raw text.
         # (先渲染并换行所有单元格，后续宽度估算基于换行后的实际内容)
         wrapped_headers = [
-            self._wrap_cell(self._render_nodes(h)) for h in tbl.headers
+            self._wrap_cell(self._render_nodes(h), cell_wrap) for h in tbl.headers
         ]
         wrapped_rows = [
-            [self._wrap_cell(self._render_nodes(cell)) for cell in row]
+            [self._wrap_cell(self._render_nodes(cell), cell_wrap) for cell in row]
             for row in tbl.rows
         ]
 
@@ -314,7 +324,6 @@ class LaTeXBlockMixin:
         # Use _wrapped_cell_width so \makecell cells contribute only their
         # longest single line, not the full pre-wrap length.
         # (用换行后内容估算宽度：\makecell 单元格取最长单行)
-        n_cols = len(tbl.headers)
         estimated_width = 0
         for i in range(n_cols):
             col_max = self._wrapped_cell_width(wrapped_headers[i])
@@ -385,24 +394,27 @@ class LaTeXBlockMixin:
             default=0,
         )
 
-    def _wrap_cell(self, text: str) -> str:
+    def _wrap_cell(self, text: str, threshold: int | None = None) -> str:
         """Wrap long table cell content with \\makecell line breaks.
 
-        When cell text exceeds _TABLE_CELL_WRAP_CHARS, split at word boundaries
-        and wrap the result in \\makecell[t]{line1\\\\line2\\\\...}.
+        When cell text exceeds the threshold, split at word boundaries and wrap
+        in \\makecell[lt]{line1\\\\line2\\\\...}.
         Only splits at spaces to avoid cutting LaTeX commands.
-        (超过阈值时在词边界处拆分，用 \\makecell[t] 包裹，避免切断 LaTeX 命令。)
+        (超过阈值时在词边界处拆分，用 \\makecell[lt] 包裹，避免切断 LaTeX 命令。)
 
         Args:
             text: Rendered cell content (已渲染的单元格内容)
+            threshold: Display-width limit per line; defaults to _TABLE_CELL_WRAP_CHARS
+                       (每行最大显示宽度；默认使用类常量)
 
         Returns:
             Original text, or \\makecell-wrapped multi-line version (原文或多行版本)
         """
+        limit = threshold if threshold is not None else self._TABLE_CELL_WRAP_CHARS
         # Use stripped text for threshold check to avoid wrapping cells that only
         # look wide due to LaTeX command names (e.g. \ref{...}, \textbf{...}).
         # (用去命令后文本决定是否换行，避免命令名虚增宽度触发不必要的换行)
-        if self._display_width(self._strip_latex_for_width(text)) <= self._TABLE_CELL_WRAP_CHARS:
+        if self._display_width(self._strip_latex_for_width(text)) <= limit:
             return text
         words = text.split(" ")
         lines: list[str] = []
@@ -411,7 +423,7 @@ class LaTeXBlockMixin:
         for word in words:
             # +1 for the space separator between words (词间空格)
             new_len = current_len + self._display_width(self._strip_latex_for_width(word)) + (1 if current else 0)
-            if new_len > self._TABLE_CELL_WRAP_CHARS and current:
+            if new_len > limit and current:
                 lines.append(" ".join(current))
                 current = [word]
                 current_len = self._display_width(self._strip_latex_for_width(word))
