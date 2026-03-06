@@ -49,3 +49,5 @@ uv.lock.bak
 reviews/*
 !reviews/.gitkeep
 generator_config.toml
+examples/icp-survey.mid.back.md
+examples/icp-survey.render.md

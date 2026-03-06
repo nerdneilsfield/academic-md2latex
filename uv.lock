@@ -673,6 +673,7 @@ dependencies = [
 [package.optional-dependencies]
 figures = [
     { name = "openai" },
+    { name = "tqdm" },
 ]
 
 [package.dev-dependencies]
@@ -691,6 +692,7 @@ requires-dist = [
     { name = "openai", marker = "extra == 'figures'", specifier = ">=1.0" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
     { name = "rumdl", specifier = ">=0.1.42" },
+    { name = "tqdm", marker = "extra == 'figures'", specifier = ">=4.0" },
 ]
 
 [package.metadata.requires-dev]
