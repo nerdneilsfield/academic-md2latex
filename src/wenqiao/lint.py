@@ -109,12 +109,236 @@ _MATH_SYMBOL_MAP: dict[str, str] = {
     "∏": r"\prod",
 }
 
+# Greek letters in plain text and math contexts (希腊字母文本/数学环境映射)
+_TEXT_GREEK_MAP: dict[str, str] = {
+    "α": r"$\alpha$",
+    "β": r"$\beta$",
+    "γ": r"$\gamma$",
+    "δ": r"$\delta$",
+    "ε": r"$\epsilon$",
+    "ζ": r"$\zeta$",
+    "η": r"$\eta$",
+    "θ": r"$\theta$",
+    "ι": r"$\iota$",
+    "κ": r"$\kappa$",
+    "λ": r"$\lambda$",
+    "μ": r"$\mu$",
+    "ν": r"$\nu$",
+    "ξ": r"$\xi$",
+    "ο": r"$o$",
+    "π": r"$\pi$",
+    "ρ": r"$\rho$",
+    "ς": r"$\sigma$",
+    "σ": r"$\sigma$",
+    "τ": r"$\tau$",
+    "υ": r"$\upsilon$",
+    "φ": r"$\phi$",
+    "χ": r"$\chi$",
+    "ψ": r"$\psi$",
+    "ω": r"$\omega$",
+    "Α": r"$A$",
+    "Β": r"$B$",
+    "Γ": r"$\Gamma$",
+    "Δ": r"$\Delta$",
+    "Ε": r"$E$",
+    "Ζ": r"$Z$",
+    "Η": r"$H$",
+    "Θ": r"$\Theta$",
+    "Ι": r"$I$",
+    "Κ": r"$K$",
+    "Λ": r"$\Lambda$",
+    "Μ": r"$M$",
+    "Ν": r"$N$",
+    "Ξ": r"$\Xi$",
+    "Ο": r"$O$",
+    "Π": r"$\Pi$",
+    "Ρ": r"$P$",
+    "Σ": r"$\Sigma$",
+    "Τ": r"$T$",
+    "Υ": r"$\Upsilon$",
+    "Φ": r"$\Phi$",
+    "Χ": r"$X$",
+    "Ψ": r"$\Psi$",
+    "Ω": r"$\Omega$",
+    "ϵ": r"$\varepsilon$",
+    "ϑ": r"$\vartheta$",
+    "ϕ": r"$\varphi$",
+    "ϖ": r"$\varpi$",
+    "ϱ": r"$\varrho$",
+    "ϰ": r"$\varkappa$",
+}
+
+_MATH_GREEK_MAP: dict[str, str] = {
+    "α": r"\alpha",
+    "β": r"\beta",
+    "γ": r"\gamma",
+    "δ": r"\delta",
+    "ε": r"\epsilon",
+    "ζ": r"\zeta",
+    "η": r"\eta",
+    "θ": r"\theta",
+    "ι": r"\iota",
+    "κ": r"\kappa",
+    "λ": r"\lambda",
+    "μ": r"\mu",
+    "ν": r"\nu",
+    "ξ": r"\xi",
+    "ο": "o",
+    "π": r"\pi",
+    "ρ": r"\rho",
+    "ς": r"\sigma",
+    "σ": r"\sigma",
+    "τ": r"\tau",
+    "υ": r"\upsilon",
+    "φ": r"\phi",
+    "χ": r"\chi",
+    "ψ": r"\psi",
+    "ω": r"\omega",
+    "Α": "A",
+    "Β": "B",
+    "Γ": r"\Gamma",
+    "Δ": r"\Delta",
+    "Ε": "E",
+    "Ζ": "Z",
+    "Η": "H",
+    "Θ": r"\Theta",
+    "Ι": "I",
+    "Κ": "K",
+    "Λ": r"\Lambda",
+    "Μ": "M",
+    "Ν": "N",
+    "Ξ": r"\Xi",
+    "Ο": "O",
+    "Π": r"\Pi",
+    "Ρ": "P",
+    "Σ": r"\Sigma",
+    "Τ": "T",
+    "Υ": r"\Upsilon",
+    "Φ": r"\Phi",
+    "Χ": "X",
+    "Ψ": r"\Psi",
+    "Ω": r"\Omega",
+    "ϵ": r"\varepsilon",
+    "ϑ": r"\vartheta",
+    "ϕ": r"\varphi",
+    "ϖ": r"\varpi",
+    "ϱ": r"\varrho",
+    "ϰ": r"\varkappa",
+}
+
+# Unicode superscript/subscript maps (Unicode 上下标映射)
+_SUPERSCRIPT_MAP: dict[str, str] = {
+    "⁰": "0",
+    "¹": "1",
+    "²": "2",
+    "³": "3",
+    "⁴": "4",
+    "⁵": "5",
+    "⁶": "6",
+    "⁷": "7",
+    "⁸": "8",
+    "⁹": "9",
+    "ⁿ": "n",
+    "ⁱ": "i",
+}
+
+_SUBSCRIPT_MAP: dict[str, str] = {
+    "₀": "0",
+    "₁": "1",
+    "₂": "2",
+    "₃": "3",
+    "₄": "4",
+    "₅": "5",
+    "₆": "6",
+    "₇": "7",
+    "₈": "8",
+    "₉": "9",
+    "ₙ": "n",
+    "ₖ": "k",
+    "ₗ": "l",
+    "ₘ": "m",
+    "ₜ": "t",
+    "ₓ": "x",
+}
+
+_SUP_CHARS = "".join(_SUPERSCRIPT_MAP.keys())
+_SUB_CHARS = "".join(_SUBSCRIPT_MAP.keys())
+_SUP_RUN_RE = re.compile(f"([{re.escape(_SUP_CHARS)}]+)")
+_SUB_RUN_RE = re.compile(f"([{re.escape(_SUB_CHARS)}]+)")
+_TEXT_BASE_SUP_RE = re.compile(rf"([A-Za-z0-9\u0370-\u03FF])([{re.escape(_SUP_CHARS)}]+)")
+_TEXT_BASE_SUB_RE = re.compile(rf"([A-Za-z0-9\u0370-\u03FF])([{re.escape(_SUB_CHARS)}]+)")
+
 
 def _replace_symbols(text: str, mapping: dict[str, str]) -> str:
     """Apply symbol replacement mapping (应用符号替换映射)."""
     out = text
     for src, dst in mapping.items():
         out = out.replace(src, dst)
+    return out
+
+
+def _replace_math_greek(text: str) -> str:
+    """Replace Greek letters in math while guarding command boundaries.
+
+    在数学环境内替换希腊字母，并避免命令与后续字母粘连。
+    """
+    chars = list(text)
+    out: list[str] = []
+    total = len(chars)
+    for i, ch in enumerate(chars):
+        rep = _MATH_GREEK_MAP.get(ch)
+        if rep is None:
+            out.append(ch)
+            continue
+        if rep.startswith("\\") and i + 1 < total:
+            nxt = chars[i + 1]
+            if nxt.isascii() and nxt.isalpha():
+                out.append(rep + " ")
+                continue
+        out.append(rep)
+    return "".join(out)
+
+
+def _script_run_to_latex(run: str, marker: str) -> str:
+    """Convert Unicode script run to LaTeX exponent/subscript segment."""
+    mapping = _SUPERSCRIPT_MAP if marker == "^" else _SUBSCRIPT_MAP
+    converted = "".join(mapping.get(ch, "") for ch in run)
+    if not converted:
+        return ""
+    if len(converted) == 1:
+        return f"{marker}{converted}"
+    return f"{marker}{{{converted}}}"
+
+
+def _replace_math_scripts(text: str) -> str:
+    """Replace script Unicode chars inside existing math spans."""
+    out = _SUP_RUN_RE.sub(lambda m: _script_run_to_latex(m.group(1), "^"), text)
+    out = _SUB_RUN_RE.sub(lambda m: _script_run_to_latex(m.group(1), "_"), out)
+    return out
+
+
+def _text_base_to_math(base: str) -> str:
+    """Convert text base char to math-safe base (e.g., Greek -> command)."""
+    return _MATH_GREEK_MAP.get(base, base)
+
+
+def _replace_text_scripts(text: str) -> str:
+    """Replace script Unicode chars in plain text, wrapping into inline math."""
+
+    def _base_sup(m: re.Match[str]) -> str:
+        base = _text_base_to_math(m.group(1))
+        sup = _script_run_to_latex(m.group(2), "^")
+        return f"${base}{sup}$"
+
+    def _base_sub(m: re.Match[str]) -> str:
+        base = _text_base_to_math(m.group(1))
+        sub = _script_run_to_latex(m.group(2), "_")
+        return f"${base}{sub}$"
+
+    out = _TEXT_BASE_SUP_RE.sub(_base_sup, text)
+    out = _TEXT_BASE_SUB_RE.sub(_base_sub, out)
+    out = _SUP_RUN_RE.sub(lambda m: f"${_script_run_to_latex(m.group(1), '^')}$", out)
+    out = _SUB_RUN_RE.sub(lambda m: f"${_script_run_to_latex(m.group(1), '_')}$", out)
     return out
 
 
@@ -142,7 +366,9 @@ def _restore_matches(source: str, slots: list[str], *, prefix: str) -> str:
 
 def _fix_math_symbols_in_span(m: re.Match[str]) -> str:
     """Convert symbols inside a single math span (替换单个数学片段内符号)."""
-    return _replace_symbols(m.group(0), _MATH_SYMBOL_MAP)
+    text = _replace_math_scripts(m.group(0))
+    text = _replace_math_greek(text)
+    return _replace_symbols(text, _MATH_SYMBOL_MAP)
 
 
 def fix_math_symbols(source: str) -> str:
@@ -162,7 +388,15 @@ def fix_math_symbols(source: str) -> str:
     # Replace in math first as plain commands, then text context as $...$
     protected = _DISPLAY_MATH_RE.sub(_fix_math_symbols_in_span, protected)
     protected = _INLINE_MATH_RE.sub(_fix_math_symbols_in_span, protected)
+
+    # Protect existing math spans, then normalize plain-text symbols/scripts.
+    protected, dmath_slots = _protect_matches(protected, _DISPLAY_MATH_RE, prefix="DMATH")
+    protected, imath_slots = _protect_matches(protected, _INLINE_MATH_RE, prefix="IMATH")
+    protected = _replace_text_scripts(protected)
+    protected = _replace_symbols(protected, _TEXT_GREEK_MAP)
     protected = _replace_symbols(protected, _TEXT_SYMBOL_MAP)
+    protected = _restore_matches(protected, imath_slots, prefix="IMATH")
+    protected = _restore_matches(protected, dmath_slots, prefix="DMATH")
 
     # 按逆序恢复：先 inline code 后 fenced code
     protected = _restore_matches(protected, inline_slots, prefix="INLINE")
