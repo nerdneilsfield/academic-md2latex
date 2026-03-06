@@ -6,12 +6,15 @@ Generate subcommand: concurrent AI figure generation from .mid.md files.
 from __future__ import annotations
 
 import asyncio
+import time
+from collections import deque
 from pathlib import Path
+from typing import Any
 
 import click
 
 from wenqiao.diagnostic import DiagCollector
-from wenqiao.genfig import FigureRunner, collect_jobs, run_generate_figures_async
+from wenqiao.genfig import FigureJob, FigureRunner, collect_jobs, run_generate_figures_async
 from wenqiao.genfig_openai import OpenAIFigureRunner
 from wenqiao.pipeline import parse_and_process
 
@@ -169,16 +172,66 @@ def generate_cmd(
         err=True,
     )
 
-    success, fail = asyncio.run(
-        run_generate_figures_async(
-            jobs,
-            runner,
-            concurrency=concurrency,
-            force=force,
-            writeback=writeback,
-            echo=lambda msg: click.echo(msg, err=True),
+    # Build tqdm progress bar with sliding-window ETA (用滑动窗口 ETA 构建 tqdm 进度条)
+    try:
+        from tqdm import tqdm as _tqdm  # optional dep (可选依赖)
+        _have_tqdm = True
+    except ImportError:
+        _have_tqdm = False
+
+    _bar: Any = None
+    _window: deque[float] = deque(maxlen=10)  # sliding window of completion times (滑动窗口)
+    _done = [0]  # completed non-skip count (已完成非跳过数)
+
+    def _on_result(job: FigureJob, result: bool | None) -> None:
+        """Update progress bar and sliding-window ETA (更新进度条和滑动窗口 ETA)."""
+        if result is None:
+            return  # skipped — bar already at full for skips (跳过不计入进度条)
+        _done[0] += 1
+        t = time.monotonic()
+        _window.append(t)
+        if _bar is not None:
+            _bar.update(1)
+            # Compute ETA from sliding window (从滑动窗口计算 ETA)
+            remaining = pending - _done[0]
+            if len(_window) >= 2 and remaining > 0:
+                rate = (len(_window) - 1) / (_window[-1] - _window[0])
+                eta_s = remaining / rate if rate > 0 else 0.0
+                mins, secs = divmod(int(eta_s), 60)
+                eta_str = f"{mins}m{secs:02d}s" if mins else f"{secs}s"
+                _bar.set_postfix(eta=eta_str, refresh=False)
+
+    # echo that respects tqdm (兼容 tqdm 的 echo 函数)
+    def _echo(msg: str) -> None:
+        if _bar is not None:
+            _bar.write(msg, file=__import__("sys").stderr)
+        else:
+            click.echo(msg, err=True)
+
+    if _have_tqdm and pending > 0:
+        _bar = _tqdm(
+            total=pending,
+            unit="fig",
+            desc="generate",
+            dynamic_ncols=True,
+            file=__import__("sys").stderr,
         )
-    )
+
+    try:
+        success, fail = asyncio.run(
+            run_generate_figures_async(
+                jobs,
+                runner,
+                concurrency=concurrency,
+                force=force,
+                writeback=writeback,
+                echo=_echo,
+                on_result=_on_result,
+            )
+        )
+    finally:
+        if _bar is not None:
+            _bar.close()
 
     click.echo(
         f"[generate] Done: {success} succeeded, {fail} failed "

@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-figures = ["openai>=1.0"]
+figures = ["openai>=1.0", "tqdm>=4.0"]
 
 [project.urls]
 Homepage = "https://github.com/nerdneilsfield/wenqiao"

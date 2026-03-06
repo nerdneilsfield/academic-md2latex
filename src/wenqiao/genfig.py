@@ -245,6 +245,7 @@ async def run_generate_figures_async(
     force: bool = False,
     writeback: bool = True,
     echo: Callable[[str], object] | None = None,
+    on_result: Callable[[FigureJob, bool | None], object] | None = None,
 ) -> tuple[int, int]:
     """Run figure generation concurrently with a semaphore.
 
@@ -256,7 +257,10 @@ async def run_generate_figures_async(
         concurrency: Max concurrent generations (最大并发数)
         force: Re-generate even if file exists (强制重新生成)
         writeback: Write ai-done marker to source file on success (成功后写回 ai-done 标记)
-        echo: Optional progress callback, e.g. click.echo (进度输出函数，可选)
+        echo: Optional progress callback for log lines (日志输出函数，可选)
+        on_result: Called after each job completes with (job, result).
+                   result is True=success, False=fail, None=skipped.
+                   (每个作业完成后回调，结果为 True/False/None，可选)
 
     Returns:
         (success_count, fail_count) tuple (成功数, 失败数 元组)
@@ -275,6 +279,8 @@ async def run_generate_figures_async(
         if not force and job.output_path.is_file():
             if echo:
                 echo(f"[generate-figures] skip {job.src} (exists)")
+            if on_result:
+                on_result(job, None)
             return None  # Skipped — not success, not fail (跳过)
 
         job.output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -284,12 +290,16 @@ async def run_generate_figures_async(
             except Exception as exc:
                 if echo:
                     echo(f"[generate-figures] ✗ {job.src} ({exc})")
+                if on_result:
+                    on_result(job, False)
                 return False
 
         # Post-condition: output file must exist (后置条件：输出文件必须存在)
         if not (ok and job.output_path.is_file()):
             if echo:
                 echo(f"[generate-figures] ✗ {job.src} (no output)")
+            if on_result:
+                on_result(job, False)
             return False
 
         if echo:
@@ -305,6 +315,8 @@ async def run_generate_figures_async(
                 if echo:
                     echo(f"[generate-figures] warn: writeback failed for {job.label}: {exc}")
 
+        if on_result:
+            on_result(job, True)
         return True
 
     results = await asyncio.gather(*[_run(j) for j in jobs], return_exceptions=True)
