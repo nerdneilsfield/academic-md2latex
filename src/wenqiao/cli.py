@@ -156,7 +156,10 @@ def cli(ctx: click.Context) -> None:
     "--figures-model",
     "figures_model",
     default=None,
-    help="Select model profile by name from [[models]] in figures config (从配置 [[models]] 中按 name 选择 profile)",
+    help=(
+        "Select model profile by name from [[models]] in figures config "
+        "(从配置 [[models]] 中按 name 选择 profile)"
+    ),
 )
 @click.option(
     "--force-regenerate",
@@ -293,12 +296,29 @@ def convert_cmd(
 
     # Resolve bibliography (解析参考文献)
     bib: dict[str, str] = {}
-    if bib_path is not None:
-        try:
-            bib = resolve_bib(bib_path)
-        except Exception as exc:
-            click.echo(f"[WARNING] Failed to parse {bib_path}: {exc}", err=True)
+    resolved_bib_path = bib_path
+    # Fallback: use document/config bibliography path when --bib is omitted
+    # (回退：--bib 省略时使用文档/配置中的 bibliography 路径)
+    if resolved_bib_path is None and cfg.bibliography:
+        candidate = Path(str(cfg.bibliography))
+        if not candidate.is_absolute():
+            base_dir = (
+                Path(filename).parent if filename not in ("<stdin>", "<string>") else Path.cwd()
+            )
+            candidate = (base_dir / candidate).resolve()
+        resolved_bib_path = candidate
 
+    if resolved_bib_path is not None:
+        if not resolved_bib_path.exists():
+            click.echo(
+                f"[WARNING] Bibliography file not found: {resolved_bib_path}",
+                err=True,
+            )
+        else:
+            try:
+                bib = resolve_bib(resolved_bib_path)
+            except Exception as exc:
+                click.echo(f"[WARNING] Failed to parse {resolved_bib_path}: {exc}", err=True)
     # Inject metadata and render (注入元数据并渲染)
     inject_metadata(east, cfg, effective_target)
     renderer_obj = create_renderer(effective_target, cfg, bib, diag)

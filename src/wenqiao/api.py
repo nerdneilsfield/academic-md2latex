@@ -172,7 +172,18 @@ def convert(
         )
 
     # Resolve bibliography (解析参考文献)
-    bib_entries = resolve_bib(bib)
+    bib_source: Path | str | dict[str, str] | None = bib
+    if bib_source is None and cfg.bibliography:
+        candidate = Path(str(cfg.bibliography))
+        if not candidate.is_absolute() and isinstance(source, Path):
+            candidate = (source.parent / candidate).resolve()
+        if candidate.exists():
+            bib_source = candidate
+        else:
+            diag.warning(
+                f"Bibliography file not found: {candidate} (参考文献文件不存在，将回退为 cite key)"
+            )
+    bib_entries = resolve_bib(bib_source)
 
     # Strict-mode check before rendering (渲染前的严格模式检查)
     if strict and diag.has_errors:
