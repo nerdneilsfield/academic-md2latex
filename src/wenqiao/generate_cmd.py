@@ -11,7 +11,7 @@ from pathlib import Path
 import click
 
 from wenqiao.diagnostic import DiagCollector
-from wenqiao.genfig import collect_jobs, run_generate_figures_async
+from wenqiao.genfig import FigureRunner, collect_jobs, run_generate_figures_async
 from wenqiao.genfig_openai import OpenAIFigureRunner
 from wenqiao.pipeline import parse_and_process
 
@@ -120,7 +120,10 @@ def generate_cmd(
 
     # Slice by start_id / end_id (1-based, inclusive) (按序号切片)
     start = max(0, start_id - 1)
-    end = end_id  # Python slice end is exclusive, but end_id is inclusive (Python 切片末为开区间)
+    # No adjustment needed: 1-based inclusive end_id == Python exclusive slice bound.
+    # (无需调整：1-based 含末端 end_id 恰好等于 Python 0-based 开区间切片上界)
+    # e.g. end_id=2 → all_jobs[start:2] → indices 0..1 = figures 1..2 (1-based)
+    end = end_id
     jobs = all_jobs[start:end]
 
     if not jobs:
@@ -137,13 +140,19 @@ def generate_cmd(
         for job in jobs:
             job.source_file = input
 
-    # Build runner (构建 runner)
-    runner = OpenAIFigureRunner(
-        api_key=api_key,
-        base_url=base_url,
-        model=model,
-        config=figures_config,
-    )
+    # Build runner based on backend type (根据后端类型构建 runner)
+    runner: FigureRunner
+    if backend_type == "openai":
+        runner = OpenAIFigureRunner(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
+            config=figures_config,
+        )
+    else:
+        # Should never reach here given Click Choice constraint (Click 约束保证不会到达此处)
+        click.echo(f"[generate] Unsupported backend type: {backend_type}", err=True)
+        raise SystemExit(1)
 
     click.echo(
         f"[generate] {len(jobs)} figure(s) to generate "
