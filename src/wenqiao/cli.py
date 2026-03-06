@@ -263,7 +263,7 @@ def convert_cmd(
         runner = OpenAIFigureRunner(config=figures_config)
 
         try:
-            jobs = collect_jobs(east, base_dir=base_dir, force=True)
+            jobs = collect_jobs(east, base_dir=base_dir, force=force_regenerate)
             success, fail = asyncio.run(
                 run_generate_figures_async(
                     jobs,
