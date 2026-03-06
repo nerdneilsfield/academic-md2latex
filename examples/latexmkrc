@@ -1,0 +1,19 @@
+# latexmk config for examples/
+# Usage:
+#   cd examples
+#   latexmk -r latexmkrc your-main.tex   # compile
+#   latexmk -r latexmkrc -c              # clean aux files
+#   latexmk -r latexmkrc -C              # full clean (inc. PDF)
+
+$pdf_mode = 5;   # 5 = xelatex (xelatex 模式)
+$xelatex = 'xelatex -interaction=nonstopmode -file-line-error -synctex=1 %O %S';
+$bibtex_use = 1; # use bibtex (使用 bibtex，兼容 \bibliography{})
+$bibtex = 'bibtex %O %B';
+
+$out_dir = 'build';
+$aux_dir = 'build';
+$max_repeat = 5;
+
+# Keep logs concise in CI/automation while retaining errors.
+$silent = 1;
+$warnings_as_errors = 0;

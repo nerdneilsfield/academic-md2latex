@@ -104,23 +104,23 @@ After generating `examples/icp-survey.tex`, compile with `latexmk`:
 
 ```bash
 cd examples
-latexmk -r latexmkrc -xelatex -pdf icp-survey.tex
+latexmk -r latexmkrc icp-survey.tex
 ```
 
 Output PDF path:
 
 `examples/build/icp-survey.pdf`
 
-Clean auxiliary files:
+Clean auxiliary files (keep PDF):
 
 ```bash
 cd examples
-latexmk -r latexmkrc -c icp-survey.tex
+latexmk -r latexmkrc -c
 ```
 
 Full clean (including PDF):
 
 ```bash
 cd examples
-latexmk -r latexmkrc -C icp-survey.tex
+latexmk -r latexmkrc -C
 ```
