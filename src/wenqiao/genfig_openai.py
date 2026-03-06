@@ -75,17 +75,71 @@ class OpenAIFigureRunner(FigureRunner):
             sys.stderr.write(f"Missing dependency: openai ({exc}).\n")
             return False
 
-        # Build prompt — include size hint if present (构建 prompt，含尺寸提示)
-        prompt = job.prompt
+        # Pass ai-params (e.g. size, quality) directly to the API (将 ai-params 透传给 API)
+        extra_params: dict[str, Any] = dict(job.params) if job.params else {}
         ok = self._call_api_and_save(
             openai,
             api_key,
             base_url,
             model,
-            prompt,
+            job.prompt,
             job.output_path,
+            extra_params,
         )
         return ok and job.output_path.is_file()
+
+    async def async_generate(self, job: FigureJob) -> bool:
+        """Generate image asynchronously via AsyncOpenAI client.
+
+        使用 AsyncOpenAI 客户端异步生成图片。
+
+        Args:
+            job: Figure generation job (图片生成作业)
+
+        Returns:
+            True if generation succeeded and output file exists (成功返回 True)
+        """
+        api_key, base_url = self._resolve_auth()
+        if not api_key or not base_url:
+            sys.stderr.write(
+                "Missing API key or base URL. (缺少 API key 或 base URL)\n"
+            )
+            return False
+
+        model = self._resolve_model()
+
+        try:
+            import openai
+        except ImportError as exc:
+            sys.stderr.write(f"Missing dependency: openai ({exc}).\n")
+            return False
+
+        # Pass ai-params directly to the API (将 ai-params 透传给 API)
+        extra_params: dict[str, Any] = dict(job.params) if job.params else {}
+
+        try:
+            client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
+            chat = await client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": job.prompt}],
+                **extra_params,
+            )
+            image_url = _extract_image_url(chat)
+            if not image_url:
+                sys.stderr.write("No image URL or data found in model output.\n")
+                _dump_response(chat)
+                return False
+        except Exception as exc:
+            sys.stderr.write(f"Async API call failed: {exc}\n")
+            return False
+
+        try:
+            _save_image(image_url, job.output_path)
+        except Exception as exc:
+            sys.stderr.write(f"Failed to save image: {exc}\n")
+            return False
+
+        return job.output_path.is_file()
 
     # ── auth resolution (认证解析) ────────────────────────────────────────
 
@@ -171,6 +225,7 @@ class OpenAIFigureRunner(FigureRunner):
         model: str,
         prompt: str,
         output_path: Path,
+        extra_params: dict[str, Any] | None = None,
     ) -> bool:
         """Call OpenAI-compatible API and save generated image (调用 API 并保存图片).
 
@@ -181,6 +236,7 @@ class OpenAIFigureRunner(FigureRunner):
             model: Model name (模型名)
             prompt: Generation prompt (生成提示词)
             output_path: Path to save image (图片保存路径)
+            extra_params: Extra kwargs passed to chat.completions.create (额外参数，透传给 API)
 
         Returns:
             True on success (成功返回 True)
@@ -190,6 +246,7 @@ class OpenAIFigureRunner(FigureRunner):
             chat = client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
+                **(extra_params or {}),
             )
             image_url = _extract_image_url(chat)
             if not image_url:

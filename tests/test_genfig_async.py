@@ -175,3 +175,50 @@ class TestWriteAiDone:
         # Generation succeeded, writeback warned — not a fail (生成成功，写回警告，不计失败)
         assert success == 1
         assert fail == 0
+
+
+class TestOpenAIRunnerAsync:
+    """Tests for OpenAIFigureRunner.async_generate (OpenAI 异步生成测试)."""
+
+    def test_has_async_generate_override(self) -> None:
+        """OpenAIFigureRunner defines async_generate (方法定义在类本身)."""
+        from wenqiao.genfig_openai import OpenAIFigureRunner
+
+        assert "async_generate" in OpenAIFigureRunner.__dict__
+
+    def test_async_generate_returns_false_without_auth(self, tmp_path: Path) -> None:
+        """async_generate returns False when no auth configured (无认证信息时返回 False)."""
+        import os
+
+        from wenqiao.genfig_openai import OpenAIFigureRunner
+
+        runner = OpenAIFigureRunner()  # No api_key, no config, no env vars set
+        job = FigureJob(
+            src="fig.png",
+            output_path=tmp_path / "fig.png",
+            prompt="a dog",
+            model=None,
+            params=None,
+            label="fig:dog",
+            source_file=None,
+        )
+        # Patch out env vars to ensure no auth resolves (清空环境变量确保无认证)
+        env_backup = {
+            k: os.environ.pop(k, None)
+            for k in [
+                "OPENAI_API_KEY",
+                "OPENAI_BASE_URL",
+                "POE_API_KEY",
+                "POE_BASE_URL",
+                "NANO_BANANA_API_KEY",
+                "NANO_BANANA_BASE_URL",
+                "WENQIAO_API_KEY",
+            ]
+        }
+        try:
+            result = asyncio.run(runner.async_generate(job))
+        finally:
+            for k, v in env_backup.items():
+                if v is not None:
+                    os.environ[k] = v
+        assert result is False
