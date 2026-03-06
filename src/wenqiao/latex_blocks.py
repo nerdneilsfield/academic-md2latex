@@ -7,6 +7,7 @@ Extracted from latex.py to keep modules under 500 lines.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, cast
 
 from wenqiao.nodes import (
@@ -14,6 +15,7 @@ from wenqiao.nodes import (
     Figure,
     Image,
     Node,
+    Paragraph,
     Table,
 )
 
@@ -77,6 +79,41 @@ class LaTeXBlockMixin:
             lines.append(f"  % Params: {pairs}")
         return lines
 
+    def _render_caption_latex(self, caption: str) -> str:
+        """Parse and render a caption string as LaTeX inline content.
+
+        Captions may contain inline Markdown such as [text](ref:label) or
+        [text](cite:key). This method parses them through the document parser
+        and renders each inline node via self.render() so that cross-refs
+        become \\ref{} and citations become \\cite{}.
+        Falls back to the raw string if parsing fails or yields no paragraphs.
+        (解析图注字符串，将 ref/cite 转换为 LaTeX 命令；解析失败时回退原文。)
+
+        Args:
+            caption: Raw caption text possibly containing inline markup (图注原文)
+
+        Returns:
+            LaTeX-rendered caption string (LaTeX 渲染后的图注文本)
+        """
+        cap = caption.strip()
+        if not cap:
+            return ""
+        # Lazy import to avoid circular dependency (延迟导入以避免循环依赖)
+        try:
+            from wenqiao.parser import parse as _parse  # noqa: PLC0415
+
+            doc = _parse(cap)
+        except Exception:
+            return cap
+        parts: list[str] = []
+        for block in doc.children:
+            if not isinstance(block, Paragraph):
+                continue
+            piece = "".join(self.render(child) for child in block.children).strip()
+            if piece:
+                parts.append(piece)
+        return " ".join(parts) if parts else cap
+
     def _render_figure_env(self, src: str, meta: dict[str, object]) -> str:
         """Build \\begin{figure}...\\end{figure} block (构建 figure 环境块).
 
@@ -93,7 +130,7 @@ class LaTeXBlockMixin:
         placement = str(meta.get("placement", "htbp"))
         width = str(meta.get("width", ""))
         height = str(meta.get("height", ""))
-        caption = str(meta.get("caption", ""))
+        caption = self._render_caption_latex(str(meta.get("caption", "")))
         label = str(meta.get("label", ""))
 
         lines = [f"\\begin{{figure}}[{placement}]"]
@@ -147,6 +184,38 @@ class LaTeXBlockMixin:
     # Cell content length above which \makecell line-breaks are inserted.
     # (单元格内容超过此长度时插入 \makecell 换行)
     _TABLE_CELL_WRAP_CHARS: int = 48
+
+    # Regex to strip LaTeX commands of the form \cmd{...} keeping only content,
+    # and bare \cmd (no braces) entirely. Used before width estimation so that
+    # commands like \ref{sec:intro} or \textbf{word} don't inflate column widths.
+    # (去除 LaTeX 命令名以减少宽度估算误差：\ref{x}→x，\cmd 裸命令→删除)
+    _LATEX_CMD_BRACED_RE = re.compile(r"\\[A-Za-z]+\{([^{}]*)\}")
+    _LATEX_CMD_BARE_RE = re.compile(r"\\[A-Za-z]+\b\s*")
+
+    @classmethod
+    def _strip_latex_for_width(cls, text: str) -> str:
+        """Strip LaTeX commands before display-width estimation.
+
+        Replaces \\cmd{content} with content, removes bare \\cmd.
+        Applied iteratively to handle nested commands (one level deep is usually
+        sufficient for table cells).
+        (去除 LaTeX 命令名，保留花括号内容，用于宽度估算)
+
+        Args:
+            text: LaTeX cell string (LaTeX 单元格文本)
+
+        Returns:
+            Stripped string approximating visible content (近似可见内容的字符串)
+        """
+        # Strip up to 3 levels of nesting (最多迭代 3 次处理嵌套)
+        result = text
+        for _ in range(3):
+            stripped = cls._LATEX_CMD_BRACED_RE.sub(r"\1", result)
+            stripped = cls._LATEX_CMD_BARE_RE.sub("", stripped)
+            if stripped == result:
+                break
+            result = stripped
+        return result
 
     @staticmethod
     def _display_width(text: str) -> int:
@@ -218,7 +287,7 @@ class LaTeXBlockMixin:
         """
         tbl = cast(Table, node)
         meta = node.metadata
-        caption = str(meta.get("caption", ""))
+        caption = self._render_caption_latex(str(meta.get("caption", "")))
         label = str(meta.get("label", ""))
         placement = str(meta.get("placement", "htbp"))
 
@@ -306,12 +375,15 @@ class LaTeXBlockMixin:
         """
         prefix = "\\makecell[lt]{"
         if not wrapped.startswith(prefix):
-            return self._display_width(wrapped)
+            return self._display_width(self._strip_latex_for_width(wrapped))
         # Extract content between outer braces (提取外层花括号内容)
         inner = wrapped[len(prefix) : -1]
         # Lines are separated by \\\\ (possibly followed by \n) (行由 \\\\ 分隔)
         logical_lines = inner.split("\\\\\n")
-        return max((self._display_width(ln) for ln in logical_lines), default=0)
+        return max(
+            (self._display_width(self._strip_latex_for_width(ln)) for ln in logical_lines),
+            default=0,
+        )
 
     def _wrap_cell(self, text: str) -> str:
         """Wrap long table cell content with \\makecell line breaks.
@@ -327,7 +399,10 @@ class LaTeXBlockMixin:
         Returns:
             Original text, or \\makecell-wrapped multi-line version (原文或多行版本)
         """
-        if self._display_width(text) <= self._TABLE_CELL_WRAP_CHARS:
+        # Use stripped text for threshold check to avoid wrapping cells that only
+        # look wide due to LaTeX command names (e.g. \ref{...}, \textbf{...}).
+        # (用去命令后文本决定是否换行，避免命令名虚增宽度触发不必要的换行)
+        if self._display_width(self._strip_latex_for_width(text)) <= self._TABLE_CELL_WRAP_CHARS:
             return text
         words = text.split(" ")
         lines: list[str] = []
@@ -335,14 +410,14 @@ class LaTeXBlockMixin:
         current_len = 0
         for word in words:
             # +1 for the space separator between words (词间空格)
-            new_len = current_len + self._display_width(word) + (1 if current else 0)
+            new_len = current_len + self._display_width(self._strip_latex_for_width(word)) + (1 if current else 0)
             if new_len > self._TABLE_CELL_WRAP_CHARS and current:
                 lines.append(" ".join(current))
                 current = [word]
-                current_len = len(word)
+                current_len = self._display_width(self._strip_latex_for_width(word))
             else:
                 current.append(word)
-                current_len = self._display_width(word)
+                current_len = self._display_width(self._strip_latex_for_width(word))
         if current:
             lines.append(" ".join(current))
         if len(lines) <= 1:
