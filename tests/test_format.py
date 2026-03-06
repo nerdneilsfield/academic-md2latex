@@ -130,6 +130,27 @@ def test_format_no_rumdl_flag(tmp_path: Path) -> None:
     assert result.exit_code == 0
 
 
+def test_format_stats_printed_when_enabled(tmp_path: Path) -> None:
+    """--stats prints formatting statistics (--stats 输出统计信息)."""
+    src = tmp_path / "doc.mid.md"
+    src.write_text("# 标题\n\n这是$x^2$公式。\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["format", str(src), "--no-rumdl", "--stats"])
+    assert result.exit_code == 0
+    assert "[format] Stats" in result.output
+    assert "changed=true" in result.output
+    assert "diff=+" in result.output
+
+
+def test_format_stats_with_check_mode(tmp_path: Path) -> None:
+    """--check --stats still prints stats output (--check --stats 仍输出统计)."""
+    src = tmp_path / "doc.mid.md"
+    src.write_text("# 标题\n\n这是$x^2$公式。\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["format", str(src), "--check", "--stats", "--no-rumdl"])
+    assert result.exit_code == 1
+    assert "[format] Stats" in result.output
+    assert "changed=true" in result.output
+
+
 def test_format_fixes_unicode_math_symbols_in_text(tmp_path: Path) -> None:
     """format converts Unicode math symbols to LaTeX in plain text."""
     src = tmp_path / "doc.mid.md"
@@ -155,6 +176,31 @@ def test_format_fixes_unicode_math_symbols_inside_math(tmp_path: Path) -> None:
     assert "→" not in content
 
 
+def test_format_fixes_greek_letters_in_text(tmp_path: Path) -> None:
+    """format converts bare Greek letters in text to inline LaTeX math."""
+    src = tmp_path / "doc.mid.md"
+    src.write_text("# 标题\n\n方差σ和均值μ。\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["format", str(src), "--no-rumdl"])
+    assert result.exit_code == 0
+    content = src.read_text(encoding="utf-8")
+    assert r"方差 $\sigma$ 和均值 $\mu$。" in content
+    assert "σ" not in content
+    assert "μ" not in content
+
+
+def test_format_fixes_greek_letters_inside_math(tmp_path: Path) -> None:
+    """format converts Greek letters in math spans to bare LaTeX commands."""
+    src = tmp_path / "doc.mid.md"
+    src.write_text("# 标题\n\n关系 $σ^2$ 与 $Δx$。\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["format", str(src), "--no-rumdl"])
+    assert result.exit_code == 0
+    content = src.read_text(encoding="utf-8")
+    assert r"$\sigma^2$" in content
+    assert r"$\Delta x$" in content
+    assert "σ" not in content
+    assert "Δ" not in content
+
+
 def test_format_does_not_touch_code_blocks_or_inline_code(tmp_path: Path) -> None:
     """format does not rewrite symbols inside code literals."""
     src = tmp_path / "doc.mid.md"
@@ -167,6 +213,48 @@ def test_format_does_not_touch_code_blocks_or_inline_code(tmp_path: Path) -> Non
     content = src.read_text(encoding="utf-8")
     assert "`a≤b`" in content
     assert "expr = 'x→y'" in content
+
+
+def test_format_does_not_touch_greek_inside_code_literals(tmp_path: Path) -> None:
+    """format does not rewrite Greek letters inside code literals."""
+    src = tmp_path / "doc.mid.md"
+    src.write_text(
+        "# 标题\n\n`σ`.\n\n```python\nname = 'μ'\n```\n",
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(main, ["format", str(src), "--no-rumdl"])
+    assert result.exit_code == 0
+    content = src.read_text(encoding="utf-8")
+    assert "`σ`" in content
+    assert "name = 'μ'" in content
+
+
+def test_format_fixes_unicode_scripts_in_text(tmp_path: Path) -> None:
+    """format converts Unicode superscripts/subscripts in text to inline math."""
+    src = tmp_path / "doc.mid.md"
+    src.write_text("# 标题\n\nm² 与 x₀，还有 nⁿ。\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["format", str(src), "--no-rumdl"])
+    assert result.exit_code == 0
+    content = src.read_text(encoding="utf-8")
+    assert r"$m^2$" in content
+    assert r"$x_0$" in content
+    assert r"$n^n$" in content
+    assert "²" not in content
+    assert "₀" not in content
+    assert "ⁿ" not in content
+
+
+def test_format_fixes_unicode_scripts_inside_math(tmp_path: Path) -> None:
+    """format converts Unicode scripts inside math spans to ^/_ notation."""
+    src = tmp_path / "doc.mid.md"
+    src.write_text("# 标题\n\n关系 $x₁$ 和 $a²$。\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["format", str(src), "--no-rumdl"])
+    assert result.exit_code == 0
+    content = src.read_text(encoding="utf-8")
+    assert r"$x_1$" in content
+    assert r"$a^2$" in content
+    assert "₁" not in content
+    assert "²" not in content
 
 
 def test_format_inserts_blank_lines_around_display_math(tmp_path: Path) -> None:
