@@ -49,7 +49,10 @@ graph LR
   `parencite`、`autocite`，支持 BibTeX 文件解析
 - **数学公式** — 行内 `$...$` 与行间 `$$...$$`，支持标签和方程环境
 - **交叉引用** — 标签和引用在不同目标中自动转换为 `\ref{}` / `<a href>` / `{#id}`
-- **图表** — 通过 HTML 注释指令设置 caption、label、width、placement
+- **图表** — 通过 HTML 注释指令设置 caption、label、width、placement；
+  图注/表注支持行内 `[text](ref:label)` / `[text](cite:key)` 标记
+- **智能表格排版** — 过宽时自动插入 `\scalebox`，长单元格用 `\makecell[lt]` 分行，
+  按列数动态计算换行阈值防止页面溢出
 - **环境块** — `<!-- begin: algorithm -->` / `<!-- end: algorithm -->`
 - **TeX 嵌入** — `<!-- include-tex: fragment.tex -->` 引入外部 LaTeX 片段
 - **AI 图片生成** — 可选的 nanobanana 兼容 runner 图片生成管线
@@ -1024,7 +1027,7 @@ def render_figure(self, node: Node) -> str:
 测试文件与源代码模块一一对应（`parser.py` → `test_parser.py`）。
 
 ```bash
-make test                    # 运行全部 479 个测试
+make test                    # 运行全部 625 个测试
 ```
 
 | 测试文件 | 覆盖内容 |
@@ -1032,7 +1035,7 @@ make test                    # 运行全部 479 个测试
 | `test_api.py` | 公共 Python API（convert、validate、format、parse） |
 | `test_parser.py` | Markdown 解析、节点创建 |
 | `test_nodes.py` | EAST 序列化、类型属性 |
-| `test_latex.py` | LaTeX 渲染（标题、公式、引用、表格、图片） |
+| `test_latex.py` | LaTeX 渲染（标题、公式、引用、表格、图片、缩放） |
 | `test_markdown.py` | 富 Markdown 渲染、索引遍 |
 | `test_html.py` | HTML 渲染、清洗、MathJax |
 | `test_comment.py` | 4 阶段注释指令处理 |
@@ -1101,7 +1104,8 @@ ln -s "$(pwd)/skills/wenqiao-writer" ~/.claude/skills/wenqiao-writer
 | `en`  | `article`       | `en`     | 标准英文论文 |
 
 两种预设均内置覆盖 wenqiao 全部功能所需的完整宏包列表：
-`amsmath`、`amssymb`、`graphicx`、`hyperref`、`xcolor`、`listings`、`amsthm`、`algorithm2e`、`booktabs`。
+`amsmath`、`amssymb`、`graphicx`、`geometry`（2 cm 页边距）、`hyperref`、`xcolor`、`listings`、
+`amsthm`、`algorithm2e`、`booktabs`、`makecell`（多行表格单元格）。
 可通过 `<!-- package-options: {...} -->` 配置各宏包选项，或用 `<!-- packages: [...] -->` 追加宏包。
 
 所有文档指令均可覆盖预设：

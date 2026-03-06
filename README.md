@@ -51,7 +51,10 @@ graph LR
   `parencite`, `autocite` with BibTeX file parsing
 - **Math** — inline `$...$` and display `$$...$$` with labels and equation environments
 - **Cross-references** — labels and refs that become `\ref{}` / `<a href>` / `{#id}` per target
-- **Figures & tables** — caption, label, width, placement via HTML comment directives
+- **Figures & tables** — caption, label, width, placement via HTML comment directives;
+  table captions support inline `[text](ref:label)` / `[text](cite:key)` markup
+- **Smart table layout** — auto-scales wide tables with `\scalebox`, wraps long cells with
+  `\makecell[lt]`, uses per-column dynamic wrap threshold to prevent page overflow
 - **Environments** — `<!-- begin: algorithm -->` / `<!-- end: algorithm -->` blocks
 - **Include TeX** — `<!-- include-tex: fragment.tex -->` for external LaTeX fragments
 - **AI figure generation** — optional pipeline with nanobanana-compatible runners
@@ -1051,7 +1054,7 @@ def render_figure(self, node: Node) -> str:
 Tests mirror source modules one-to-one (`parser.py` → `test_parser.py`).
 
 ```bash
-make test                    # Run all 479 tests
+make test                    # Run all 625 tests
 ```
 
 | Test file | Covers |
@@ -1059,7 +1062,7 @@ make test                    # Run all 479 tests
 | `test_api.py` | Public Python API (convert, validate, format, parse) |
 | `test_parser.py` | Markdown parsing, node creation |
 | `test_nodes.py` | EAST serialization, type properties |
-| `test_latex.py` | LaTeX rendering (headings, math, citations, tables, figures) |
+| `test_latex.py` | LaTeX rendering (headings, math, citations, tables, figures, scaling) |
 | `test_markdown.py` | Rich Markdown rendering, index pass |
 | `test_html.py` | HTML rendering, sanitization, MathJax |
 | `test_comment.py` | 4-phase comment directive processing |
@@ -1131,7 +1134,8 @@ Presets provide a one-line starting configuration for common document types:
 | `en`   | `article`       | `en`     | Standard English paper |
 
 Both presets include a comprehensive package set covering all wenqiao features:
-`amsmath`, `amssymb`, `graphicx`, `hyperref`, `xcolor`, `listings`, `amsthm`, `algorithm2e`, `booktabs`.
+`amsmath`, `amssymb`, `graphicx`, `geometry` (2 cm margins), `hyperref`, `xcolor`, `listings`,
+`amsthm`, `algorithm2e`, `booktabs`, `makecell` (multi-line table cells).
 Add `<!-- package-options: {...} -->` to configure individual packages, or add more via `<!-- packages: [...] -->`.
 
 All document directives override the preset:
