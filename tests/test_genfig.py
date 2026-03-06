@@ -254,3 +254,21 @@ class TestGenerateFigureJob:
         assert runner.calls[0] is job
         assert runner.calls[0].model == "dalle-3"
         assert runner.calls[0].params == {"size": "1024x1024"}
+
+
+# ── FigureJob field extensions ────────────────────────────────────────────────
+
+
+def test_figure_job_has_label_field() -> None:
+    """FigureJob exposes label and source_file fields (FigureJob 含 label/source_file 字段)."""
+    job = FigureJob(
+        src="fig1.png",
+        output_path=Path("/tmp/fig1.png"),
+        prompt="a cat",
+        model=None,
+        params=None,
+        label="fig:cat",
+        source_file=None,
+    )
+    assert job.label == "fig:cat"
+    assert job.source_file is None

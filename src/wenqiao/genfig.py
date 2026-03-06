@@ -33,6 +33,8 @@ class FigureJob:
     prompt: str
     model: str | None
     params: dict[str, Any] | None
+    label: str = ""  # Figure label for writeback matching (用于 writeback 匹配的标签)
+    source_file: Path | None = None  # Source .mid.md path for ai-done writeback (源文件路径，可选)
 
 
 def _walk(node: Node) -> Iterator[Node]:
@@ -101,6 +103,8 @@ def collect_jobs(
                 prompt=prompt,
                 model=ai.get("model") if isinstance(ai.get("model"), str) else None,
                 params=ai.get("params") if isinstance(ai.get("params"), dict) else None,
+                label=str(node.metadata.get("label", src)),  # Label for writeback matching (writeback 匹配标签)
+                source_file=None,  # Caller sets this if writeback is needed (调用方按需设置)
             )
         )
     return jobs
