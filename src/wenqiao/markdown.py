@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import cast
 
@@ -18,6 +19,7 @@ from wenqiao.nodes import (
     CodeInline,
     CrossRef,
     Document,
+    Figure,
     FootnoteDef,
     FootnoteRef,
     Heading,
@@ -29,8 +31,10 @@ from wenqiao.nodes import (
     Node,
     Paragraph,
     RawBlock,
+    Table,
     Text,
 )
+from wenqiao.parser import parse
 
 
 def _yaml_safe_scalar(val: str) -> str:
@@ -65,6 +69,11 @@ _LABEL_STRINGS: dict[str, dict[str, str]] = {
     "zh": {"figure": "图", "table": "表"},
     "en": {"figure": "Figure", "table": "Table"},
 }
+
+_LATEX_TABULAR_RE = re.compile(
+    r"\\begin\{tabular\}\{([^}]*)\}(.*?)\\end\{tabular\}",
+    re.DOTALL,
+)
 
 
 class MarkdownRenderer(MarkdownBlockMixin):
@@ -156,8 +165,21 @@ class MarkdownRenderer(MarkdownBlockMixin):
                 if key not in index._cite_key_set:
                     index._cite_key_set.add(key)
                     index.cite_keys.append(key)
+        # Figure/Table/Image captions may also contain cite links.
+        if isinstance(node, (Figure, Table, Image)):
+            caption = str(node.metadata.get("caption", "")).strip()
+            if caption:
+                self._index_caption_citations(caption, index)
         for child in node.children:
             self._index_node(child, index)
+
+    def _index_caption_citations(self, caption: str, index: MarkdownIndex) -> None:
+        """Index citations that appear inside caption inline markdown (索引图注中的引用)."""
+        try:
+            cap_doc = parse(caption)
+        except Exception:
+            return
+        self._index_node(cap_doc, index)
 
     # ── Pass 2: Render helpers ───────────────────────────────────
 
@@ -310,6 +332,9 @@ class MarkdownRenderer(MarkdownBlockMixin):
             from wenqiao.sanitize import sanitize_html
 
             return sanitize_html(rb.content)
+        if rb.kind == "latex":
+            if table_md := self._render_latex_table_raw(rb.content):
+                return table_md
         # LaTeX raw block: wrap in details fold (LaTeX 块：折叠显示)
         return (
             "<details>\n"
@@ -353,10 +378,7 @@ class MarkdownRenderer(MarkdownBlockMixin):
     def _render_citation(self, node: Node) -> str:
         """引用 → Markdown 脚注引用 (Citation → footnote ref)."""
         c = cast(Citation, node)
-        refs = "".join(f"[^{key}]" for key in c.keys)
-        if c.display_text:
-            return f"{c.display_text}{refs}"
-        return refs
+        return self._format_citation(c, escape_display=False)
 
     def _render_cross_ref(self, node: Node) -> str:
         """交叉引用 → HTML 锚点 (Cross-ref → HTML anchor link)."""
@@ -384,3 +406,165 @@ class MarkdownRenderer(MarkdownBlockMixin):
         content = self._render_children(node).strip()
         self._native_fn_defs[fd.def_id] = content
         return ""
+
+    def _render_caption_inline(self, caption: str) -> str:
+        """Render caption as inline markdown with ref/cite support (图注行内渲染)."""
+        cap = caption.strip()
+        if not cap:
+            return ""
+        try:
+            cap_doc = parse(cap)
+        except Exception:
+            return _esc(caption)
+        if not cap_doc.children or any(
+            not isinstance(block, Paragraph) for block in cap_doc.children
+        ):
+            return _esc(caption)
+        parts: list[str] = []
+        for block in cap_doc.children:
+            para = cast(Paragraph, block)
+            piece = "".join(self._dispatch(child) for child in para.children).strip()
+            if piece:
+                parts.append(piece)
+        if not parts:
+            return _esc(caption)
+        return " ".join(parts)
+
+    def _render_latex_table_raw(self, content: str) -> str | None:
+        """Convert simple LaTeX table/tabular raw block to HTML table when possible."""
+        if r"\begin{table" not in content or r"\begin{tabular" not in content:
+            return None
+
+        match = _LATEX_TABULAR_RE.search(content)
+        if match is None:
+            return None
+        tabular_spec = match.group(1)
+        tabular_body = match.group(2)
+
+        rows = self._parse_latex_tabular_rows(tabular_body, tabular_spec)
+        if not rows:
+            return None
+
+        caption = self._extract_latex_braced_value(content, "caption")
+        label = self._extract_latex_braced_value(content, "label")
+        id_attr = f' id="{_esc(label)}"' if label else ""
+
+        self._tab_count += 1
+        tab_label = self._labels["table"]
+
+        lines: list[str] = [f"<figure{id_attr}>", "  <table>"]
+
+        headers = rows[0]
+        body_rows = rows[1:]
+
+        lines.append("    <thead>")
+        lines.append("      <tr>")
+        for cell in headers:
+            lines.append(f"        <th>{self._latex_inline_to_html(cell)}</th>")
+        lines.append("      </tr>")
+        lines.append("    </thead>")
+
+        if body_rows:
+            lines.append("    <tbody>")
+            for row in body_rows:
+                lines.append("      <tr>")
+                for cell in row:
+                    lines.append(f"        <td>{self._latex_inline_to_html(cell)}</td>")
+                lines.append("      </tr>")
+            lines.append("    </tbody>")
+        lines.append("  </table>")
+
+        if caption:
+            lines.append(
+                f"  <figcaption><strong>{tab_label} {self._tab_count}</strong>: "
+                f"{self._latex_inline_to_html(caption)}</figcaption>"
+            )
+        else:
+            lines.append(
+                f"  <figcaption><strong>{tab_label} {self._tab_count}</strong></figcaption>"
+            )
+        lines.append("</figure>")
+        return "\n".join(lines) + "\n\n"
+
+    def _count_tabular_columns(self, spec: str) -> int:
+        """Count expected tabular columns from column spec (统计 tabular 列数)."""
+        expanded = spec
+        for _ in range(6):
+            m = re.search(r"\*\{(\d+)\}\{([^{}]+)\}", expanded)
+            if m is None:
+                break
+            n = int(m.group(1))
+            repeated = m.group(2) * n
+            expanded = expanded[: m.start()] + repeated + expanded[m.end() :]
+        expanded = re.sub(r"@\{[^}]*\}", "", expanded)
+        return len(re.findall(r"[lcrpmbxLCRPMBX]", expanded))
+
+    def _parse_latex_tabular_rows(self, body: str, column_spec: str = "") -> list[list[str]]:
+        """Parse basic tabular rows split by \\\\ and & (解析基础 tabular 行列)."""
+        expected_cols = self._count_tabular_columns(column_spec)
+        cleaned = body.replace("\r\n", "\n").replace("\r", "\n")
+        cleaned = re.sub(r"(?m)^\s*%.*$", "", cleaned)
+        cleaned = cleaned.replace(r"\\hline", r"\\")
+        cleaned = cleaned.replace(r"\hline", "\n")
+        cleaned = re.sub(r"(?<!\\)\\\\(?:\[[^\]]*\])?", "\n", cleaned)
+        # Raw blocks from <!-- begin: raw --> may flatten lines and collapse "\\"
+        # between rows to "\"; recover rows on likely first-cell boundaries.
+        cleaned = re.sub(r"\\(?=[A-Z0-9\u4e00-\u9fff])", "\n", cleaned)
+
+        rows: list[list[str]] = []
+        for chunk in cleaned.splitlines():
+            line = re.sub(r"\\+$", "", chunk).strip()
+            if not line:
+                continue
+            cells = [c.strip() for c in line.split("&")]
+            if not any(cells):
+                continue
+            if expected_cols > 0 and len(cells) > expected_cols and len(cells) % expected_cols == 0:
+                for i in range(0, len(cells), expected_cols):
+                    group = [c.strip() for c in cells[i : i + expected_cols]]
+                    if any(group):
+                        rows.append(group)
+                continue
+            rows.append(cells)
+        return rows
+
+    def _extract_latex_braced_value(self, content: str, command: str) -> str:
+        r"""Extract \command{...} value with brace balancing (提取命令值)."""
+        prefix = f"\\{command}{{"
+        start = content.find(prefix)
+        if start < 0:
+            return ""
+        i = start + len(prefix)
+        depth = 1
+        while i < len(content):
+            ch = content[i]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return content[start + len(prefix) : i].strip()
+            i += 1
+        return ""
+
+    def _latex_inline_to_html(self, text: str) -> str:
+        """Render a minimal subset of LaTeX inline markup to HTML (最小子集转换)."""
+        src = text.strip()
+        if not src:
+            return ""
+        src = re.sub(r"^\\(?=[A-Z0-9\u4e00-\u9fff])", "", src)
+
+        out: list[str] = []
+        pos = 0
+        for m in re.finditer(r"\\textbf\{([^{}]*)\}", src):
+            if m.start() > pos:
+                out.append(_esc(src[pos : m.start()]))
+            out.append(f"<strong>{_esc(m.group(1))}</strong>")
+            pos = m.end()
+        if pos < len(src):
+            out.append(_esc(src[pos:]))
+
+        rendered = "".join(out)
+        rendered = rendered.replace(r"\%", "%").replace(r"\_", "_")
+        rendered = rendered.replace(r"\&", "&")
+        return rendered

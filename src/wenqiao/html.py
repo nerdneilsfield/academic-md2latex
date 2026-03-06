@@ -179,13 +179,41 @@ def _build_css(image_max_width: str) -> str:
   --content-max-width: 920px;
   --image-max-width: {image_max_width};
   --toc-width: 260px;
+  --paper-bg: #f4f6fa;
+  --surface-bg: #ffffff;
+  --text-main: #1f2733;
+  --text-muted: #4d5b70;
+  --line-soft: #dbe2ec;
+  --line-strong: #c8d2df;
+  --accent: #275f9b;
+  --accent-soft: #ecf3fb;
 }}
-html {{ scroll-behavior: smooth; }}
+html {{
+  scroll-behavior: smooth;
+  background: var(--paper-bg);
+}}
+* {{ box-sizing: border-box; }}
 body {{
   margin: 0;
-  color: #222;
-  font-family: serif;
-  line-height: 1.7;
+  color: var(--text-main);
+  background: var(--paper-bg);
+  font-family:
+    "Source Han Serif SC",
+    "Noto Serif CJK SC",
+    "Noto Serif SC",
+    "Songti SC",
+    "STSong",
+    "PingFang SC",
+    "Microsoft YaHei",
+    serif;
+  line-height: 1.78;
+  font-size: 17px;
+  letter-spacing: 0.01em;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  line-break: auto;
+  word-break: normal;
   padding: 2em 1.2em;
   overflow-x: hidden;
 }}
@@ -193,50 +221,171 @@ body {{
   width: min(var(--content-max-width), calc(100vw - 2.4rem));
   margin-left: auto;
   margin-right: auto;
+  background: var(--surface-bg);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(34, 55, 84, 0.06);
+  padding: 1.55rem 1.45rem 1.7rem;
 }}
-.doc-header {{ margin-bottom: 1.2em; text-align: center; }}
-.doc-title {{ margin: 0; }}
-.doc-author {{ margin: 0.25em 0 0; color: #555; }}
-.doc-date {{ margin: 0.25em 0 0; color: #666; font-size: 0.95em; }}
-.doc-abstract {{ margin: 0.75em 0 0; }}
-h1, h2, h3, h4 {{ font-weight: bold; margin-top: 1.5em; }}
+p {{
+  margin: 0.72em 0 0.9em;
+  color: var(--text-main);
+}}
+a {{
+  color: var(--accent);
+  text-decoration: none;
+  text-underline-offset: 0.16em;
+}}
+a:hover {{ text-decoration: underline; }}
+.doc-header {{
+  margin-bottom: 1.25em;
+  text-align: center;
+  padding-bottom: 0.85em;
+  border-bottom: 1px solid var(--line-soft);
+}}
+.doc-title {{
+  margin: 0;
+  font-size: clamp(1.72rem, 2.3vw, 2.24rem);
+  line-height: 1.3;
+  letter-spacing: 0.025em;
+  font-family:
+    "Source Han Sans SC",
+    "Noto Sans CJK SC",
+    "Noto Sans SC",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+}}
+.doc-author {{
+  margin: 0.35em 0 0;
+  color: var(--text-muted);
+  font-size: 1rem;
+}}
+.doc-date {{
+  margin: 0.2em 0 0;
+  color: #64748a;
+  font-size: 0.94rem;
+}}
+.doc-abstract {{
+  margin: 0.82em auto 0;
+  max-width: 74ch;
+  text-align: left;
+  color: #2d3a4a;
+}}
+h1, h2, h3, h4 {{
+  color: #1f2f45;
+  font-family:
+    "Source Han Sans SC",
+    "Noto Sans CJK SC",
+    "Noto Sans SC",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+  font-weight: 650;
+  line-height: 1.35;
+  margin-top: 1.45em;
+  margin-bottom: 0.5em;
+}}
+h1 {{ font-size: 1.95rem; }}
+h2 {{ font-size: 1.58rem; }}
+h3 {{ font-size: 1.3rem; }}
+h4 {{ font-size: 1.13rem; }}
 img {{ max-width: 100%; height: auto; }}
-figure {{ text-align: center; margin: 1.5em auto; }}
-figure img {{ max-width: min(100%, var(--image-max-width)); }}
-figcaption {{ font-style: italic; margin-top: 0.4em; }}
-table {{ border-collapse: collapse; margin: 1em auto; }}
-th, td {{ border: 1px solid #bbb; padding: 0.4em 0.8em; }}
-th {{ background: #f4f4f4; }}
+figure {{
+  text-align: center;
+  margin: 1.5em auto;
+  padding: 0.55rem 0.45rem 0.7rem;
+  border-radius: 10px;
+  background: #fbfcff;
+  border: 1px solid var(--line-soft);
+}}
+figure img {{
+  max-width: min(100%, var(--image-max-width));
+  border-radius: 8px;
+  border: 1px solid var(--line-soft);
+}}
+figcaption {{
+  font-style: normal;
+  margin-top: 0.55em;
+  color: #35465c;
+  font-size: 0.95em;
+  line-height: 1.62;
+}}
+table {{
+  border-collapse: collapse;
+  margin: 0.75em auto 0;
+  background: #fff;
+}}
+th, td {{
+  border: 1px solid var(--line-strong);
+  padding: 0.45em 0.78em;
+  vertical-align: top;
+}}
+th {{
+  background: var(--accent-soft);
+  color: #1f3858;
+  font-weight: 650;
+}}
+tbody tr:nth-child(even) {{ background: #fafcff; }}
 .table-wrap {{
   text-align: center;
   margin: 1.5em 0;
   overflow-x: auto;
   max-width: 100%;
+  border-radius: 10px;
 }}
 .table-wrap table {{
   width: max-content;
   min-width: 100%;
 }}
-.table-caption {{ font-style: italic; margin-bottom: 0.4em; }}
-pre {{ background: #f6f6f6; padding: 1em; overflow-x: auto; border-radius: 4px; }}
-code {{ font-family: monospace; font-size: 0.92em; }}
+.table-caption {{
+  font-style: normal;
+  margin-bottom: 0.45em;
+  color: #334a67;
+}}
+pre {{
+  background: #f7f9fd;
+  border: 1px solid var(--line-soft);
+  padding: 0.92em 1em;
+  overflow-x: auto;
+  border-radius: 8px;
+}}
+code {{
+  font-family:
+    "JetBrains Mono",
+    "SFMono-Regular",
+    "Fira Code",
+    "Cascadia Mono",
+    "Menlo",
+    "Consolas",
+    monospace;
+  font-size: 0.9em;
+}}
+pre code {{ line-height: 1.55; }}
 p, li, figcaption, td, th {{ overflow-wrap: anywhere; }}
 blockquote {{
-  border-left: 4px solid #ccc;
+  border-left: 4px solid #9fb4d1;
   margin-left: 0;
-  padding-left: 1em;
-  color: #555;
+  padding: 0.2em 0 0.2em 0.95em;
+  color: #41516a;
+  background: #f7fbff;
+  border-radius: 0 6px 6px 0;
 }}
-.footnotes {{ border-top: 1px solid #ccc; margin-top: 3em; font-size: 0.9em; }}
+.footnotes {{
+  border-top: 1px solid var(--line-strong);
+  margin-top: 3em;
+  padding-top: 0.5em;
+  font-size: 0.92em;
+}}
 .bibliography {{ margin-top: 2em; }}
 details {{
-  background: #fafafa;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 0.5em 1em;
+  background: #fafcff;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 0.5em 0.9em;
   margin: 1em 0;
 }}
-summary {{ cursor: pointer; font-weight: bold; }}
+summary {{ cursor: pointer; font-weight: 650; color: #2b425f; }}
 .toc-panel {{
   position: fixed;
   left: 1rem;
@@ -252,10 +401,10 @@ summary {{ cursor: pointer; font-weight: bold; }}
 .toc-panel > summary {{
   list-style: none;
   margin: 0;
-  padding: 0.5em 0.75em;
+  padding: 0.52em 0.8em;
   background: #fff;
-  border: 1px solid #d8d8d8;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--line-soft);
+  box-shadow: 0 6px 14px rgba(22, 45, 73, 0.11);
   cursor: pointer;
   user-select: none;
   font-weight: 600;
@@ -271,13 +420,13 @@ summary {{ cursor: pointer; font-weight: bold; }}
   max-height: calc(100vh - 5rem);
   overflow: hidden;
   background: #fff;
-  border: 1px solid #d8d8d8;
+  border: 1px solid var(--line-soft);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09);
+  box-shadow: 0 14px 30px rgba(17, 39, 64, 0.14);
 }}
 .toc-panel[open] > summary {{
   border: 0;
-  border-bottom: 1px solid #ececec;
+  border-bottom: 1px solid var(--line-soft);
   border-radius: 10px 10px 0 0;
   box-shadow: none;
   padding: 0.65em 0.8em;
@@ -297,7 +446,7 @@ summary {{ cursor: pointer; font-weight: bold; }}
   list-style: none;
 }}
 .toc-nav li {{ margin: 0.22em 0; line-height: 1.35; }}
-.toc-nav a {{ color: #1f3557; text-decoration: none; }}
+.toc-nav a {{ color: #23466f; text-decoration: none; }}
 .toc-nav a:hover {{ text-decoration: underline; }}
 .toc-nav .toc-level-2 {{ margin-left: 0.7em; }}
 .toc-nav .toc-level-3 {{ margin-left: 1.4em; font-size: 0.95em; }}
@@ -307,18 +456,27 @@ summary {{ cursor: pointer; font-weight: bold; }}
   bottom: 1rem;
   z-index: 21;
   text-decoration: none;
-  padding: 0.4em 0.6em;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  padding: 0.42em 0.62em;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
   background: #fff;
-  color: #333;
+  color: #27496e;
+  box-shadow: 0 7px 16px rgba(25, 44, 70, 0.12);
+}}
+.back-to-top:hover {{
+  background: #f7fbff;
+  text-decoration: none;
 }}
 @media (max-width: 1180px) {{
   body {{
-    padding: 1rem 0.85rem 1.1rem;
+    padding: 0.95rem 0.78rem 1.08rem;
+    font-size: 16.4px;
   }}
   .content-wrap {{
     width: min(var(--content-max-width), calc(100vw - 1.7rem));
+    border-radius: 10px;
+    padding: 1.1rem 0.88rem 1.2rem;
+    box-shadow: 0 6px 14px rgba(34, 55, 84, 0.07);
   }}
   .toc-panel {{ left: 0.7rem; top: 0.7rem; }}
   .toc-panel[open] {{

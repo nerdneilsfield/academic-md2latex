@@ -141,6 +141,7 @@ def inject_metadata(
                 "author": cfg.author,
                 "date": cfg.date,
                 "abstract": cfg.abstract,
+                "html_image_max_width": cfg.html_image_max_width,
             }
         )
 
