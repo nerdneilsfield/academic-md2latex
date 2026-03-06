@@ -51,6 +51,7 @@ _DEFAULTS: dict[str, object] = {
     "preamble": "",
     "heading_id_style": "attr",
     "locale": "zh",
+    "html_image_max_width": "92%",
     "strict": False,
     "verbose": False,
 }
@@ -124,6 +125,7 @@ class WenqiaoConfig:
     # Markdown options (Markdown 选项)
     heading_id_style: str = "attr"  # attr | html
     locale: str = "zh"  # zh | en
+    html_image_max_width: str = "92%"  # HTML image max width (HTML 图片最大宽度)
 
     # Runtime flags (运行时标志，非序列化)
     strict: bool = False

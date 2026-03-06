@@ -49,6 +49,7 @@ DOCUMENT_DIRECTIVES = frozenset(
         "latex-mode",
         "bibliography-mode",
         "preset",  # Document preset selection e.g. zh (文档预设选择，如 zh)
+        "html-image-max-width",
     }
 )
 
