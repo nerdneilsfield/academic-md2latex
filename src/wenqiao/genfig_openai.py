@@ -21,6 +21,10 @@ _DEFAULT_CONFIG = "~/.config/skiils.toml"
 # Default model name (默认模型名)
 _DEFAULT_MODEL = "nano-banana-pro"
 
+# Parameters that belong to the Images API — embed into prompt instead of passing to chat.completions
+# (图片 API 专属参数 — 嵌入 prompt，不传给 chat.completions)
+_IMAGES_API_ONLY_PARAMS: frozenset[str] = frozenset({"size", "quality", "style", "n"})
+
 
 class OpenAIFigureRunner(FigureRunner):
     """OpenAI-compatible figure runner (OpenAI 兼容图片生成 runner).
@@ -75,14 +79,23 @@ class OpenAIFigureRunner(FigureRunner):
             sys.stderr.write(f"Missing dependency: openai ({exc}).\n")
             return False
 
-        # Pass ai-params (e.g. size, quality) directly to the API (将 ai-params 透传给 API)
-        extra_params: dict[str, Any] = dict(job.params) if job.params else {}
+        # Separate chat-compatible params from Images-API-only ones (分离 chat 参数与图片 API 专属参数)
+        extra_params: dict[str, Any] = {}
+        prompt_suffix: list[str] = []
+        for k, v in (job.params or {}).items():
+            if k in _IMAGES_API_ONLY_PARAMS:
+                prompt_suffix.append(f"{k}: {v}")  # embed into prompt (嵌入 prompt)
+            else:
+                extra_params[k] = v
+        effective_prompt = job.prompt
+        if prompt_suffix:
+            effective_prompt = job.prompt + "\n" + ", ".join(prompt_suffix)
         ok = self._call_api_and_save(
             openai,
             api_key,
             base_url,
             model,
-            job.prompt,
+            effective_prompt,
             job.output_path,
             extra_params,
         )
@@ -114,14 +127,23 @@ class OpenAIFigureRunner(FigureRunner):
             sys.stderr.write(f"Missing dependency: openai ({exc}).\n")
             return False
 
-        # Pass ai-params directly to the API (将 ai-params 透传给 API)
-        extra_params: dict[str, Any] = dict(job.params) if job.params else {}
+        # Separate chat-compatible params from Images-API-only ones (分离 chat 参数与图片 API 专属参数)
+        extra_params: dict[str, Any] = {}
+        prompt_suffix: list[str] = []
+        for k, v in (job.params or {}).items():
+            if k in _IMAGES_API_ONLY_PARAMS:
+                prompt_suffix.append(f"{k}: {v}")  # embed into prompt (嵌入 prompt)
+            else:
+                extra_params[k] = v
+        effective_prompt = job.prompt
+        if prompt_suffix:
+            effective_prompt = job.prompt + "\n" + ", ".join(prompt_suffix)
 
         try:
             client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
             chat = await client.chat.completions.create(
                 model=model,
-                messages=[{"role": "user", "content": job.prompt}],
+                messages=[{"role": "user", "content": effective_prompt}],
                 **extra_params,
             )
             image_url = _extract_image_url(chat)
@@ -151,7 +173,7 @@ class OpenAIFigureRunner(FigureRunner):
         # Try TOML config (尝试 TOML 配置)
         config_path = self._config_path or Path(_DEFAULT_CONFIG).expanduser()
         if isinstance(config_path, Path) and config_path.exists():
-            cfg = self._load_config(config_path)
+            cfg = self._load_config(config_path, model_name=self._model)
             cfg_key = cfg.get("api_key")
             cfg_base = cfg.get("api_base_url")
         elif self._config_path is not None and not config_path.exists():
@@ -175,44 +197,74 @@ class OpenAIFigureRunner(FigureRunner):
         return api_key, base_url
 
     def _resolve_model(self) -> str:
-        """Resolve model from arg / config / default (解析模型名)."""
-        if self._model:
-            return self._model
+        """Resolve actual model name from config profile / default.
 
+        ``self._model`` is treated as a profile selector (name in [[models]]).
+        The actual model name for the API comes from the selected profile's
+        ``model`` or ``image_model`` field.
+
+        self._model 作为 profile 选择器（[[models]] 中的 name 字段）。
+        实际传给 API 的模型名来自所选 profile 的 model / image_model 字段。
+        """
         config_path = self._config_path or Path(_DEFAULT_CONFIG).expanduser()
         if isinstance(config_path, Path) and config_path.exists():
             try:
-                cfg = self._load_config(config_path)
+                cfg = self._load_config(config_path, model_name=self._model)
                 model = cfg.get("model") or cfg.get("image_model")
                 if model:
                     return str(model)
             except Exception:
                 pass
 
-        return _DEFAULT_MODEL
+        # No config: self._model as direct model name fallback (无配置时直接用作模型名)
+        return self._model or _DEFAULT_MODEL
 
     # ── config loading (配置加载) ──────────────────────────────────────────
 
     @staticmethod
-    def _load_config(path: Path) -> dict[str, Any]:
-        """Load TOML config file (加载 TOML 配置文件).
+    def _load_config(path: Path, model_name: str | None = None) -> dict[str, Any]:
+        """Load TOML config file, optionally selecting a named model profile.
+
+        加载 TOML 配置文件，可通过 model_name 选择具名模型配置项。
+
+        Supports two layouts (支持两种格式):
+          - Flat: top-level ``api_key``, ``api_base_url``, ``model`` keys.
+          - Profiles: ``[[models]]`` array, each entry with a ``name`` field.
+            If ``model_name`` is given, the matching entry is returned.
+            If omitted, the first entry is used.
 
         Args:
             path: Path to TOML config file (TOML 配置文件路径)
+            model_name: Profile name to select from ``[[models]]`` array (模型配置名)
 
         Returns:
-            Config dictionary, preferring [nanobanana] section (配置字典)
+            Config dictionary for the selected profile (选中的配置字典)
 
         Raises:
             FileNotFoundError: If config file does not exist (配置文件不存在)
+            KeyError: If ``model_name`` not found in ``[[models]]`` (找不到指定 profile)
         """
         if not path.exists():
             raise FileNotFoundError(f"config not found: {path}")
         import tomllib
 
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-        if isinstance(data.get("nanobanana"), dict):
-            return dict(data["nanobanana"])
+        data: dict[str, Any] = tomllib.loads(path.read_text(encoding="utf-8"))
+
+        # [[models]] array layout (profiles 格式)
+        profiles = data.get("models")
+        if isinstance(profiles, list) and profiles:
+            if model_name is not None:
+                for entry in profiles:
+                    if isinstance(entry, dict) and entry.get("name") == model_name:
+                        return dict(entry)
+                raise KeyError(
+                    f"Model profile '{model_name}' not found in {path} "
+                    f"(可用 profile: {[e.get('name') for e in profiles if isinstance(e, dict)]})"
+                )
+            # No name given — use first profile (未指定时用第一个)
+            return dict(profiles[0])
+
+        # Flat layout — return top-level keys (平铺格式)
         return dict(data)
 
     # ── API call and image saving (API 调用与图片保存) ─────────────────────

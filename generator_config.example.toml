@@ -1,0 +1,26 @@
+# wenqiao generate — example figure runner configuration
+# 文桥 generate 命令 — 图片生成器示例配置
+#
+# Usage / 用法:
+#   wenqiao generate doc.mid.md --figures-config config.toml --model openai
+#
+# Each [[models]] entry is a named profile.
+# 每个 [[models]] 条目是一个具名配置 profile。
+#
+# --model selects by name; if omitted, the first profile is used.
+# --model 按 name 字段选择；不传时使用第一个 profile。
+#
+# Key priority (优先级，高 → 低):
+#   CLI (--api-key / --base-url) > this file > env var (WENQIAO_API_KEY / OPENAI_API_KEY)
+
+[[models]]
+name        = "openai"
+api_key     = "sk-your-openai-key"
+api_base_url = "https://api.openai.com/v1"
+model       = "gpt-image-1"
+
+[[models]]
+name        = "local"
+api_key     = "none"
+api_base_url = "http://localhost:8080/v1"
+model       = "sdxl-turbo"
