@@ -304,7 +304,7 @@ class LaTeXBlockMixin:
         Returns:
             Max single-line display width (最大单行显示宽度)
         """
-        prefix = "\\makecell[t]{"
+        prefix = "\\makecell[lt]{"
         if not wrapped.startswith(prefix):
             return self._display_width(wrapped)
         # Extract content between outer braces (提取外层花括号内容)
@@ -347,7 +347,10 @@ class LaTeXBlockMixin:
             lines.append(" ".join(current))
         if len(lines) <= 1:
             return text  # single word longer than threshold — cannot split (无法拆分)
-        return "\\makecell[t]{" + "\\\\\n".join(lines) + "}"
+        # [lt] = left-horizontal + top-vertical; avoids the default center-
+        # horizontal that makes shorter wrapped lines appear indented.
+        # ([lt] = 左对齐+顶对齐；避免默认居中导致换行后短行看起来缩进)
+        return "\\makecell[lt]{" + "\\\\\n".join(lines) + "}"
 
     def render_environment(self, node: Node) -> str:
         r"""Render LaTeX environment with optional options and args.
