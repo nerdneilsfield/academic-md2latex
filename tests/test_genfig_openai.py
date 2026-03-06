@@ -41,6 +41,8 @@ class TestOpenAIFigureRunnerBasics:
             "NANO_BANANA_BASE_URL",
         ):
             monkeypatch.delenv(var, raising=False)
+        # Prevent default config file from providing credentials (屏蔽默认配置文件)
+        monkeypatch.setattr("wenqiao.genfig_openai._DEFAULT_CONFIG", str(tmp_path / "no.toml"))
 
         runner = OpenAIFigureRunner()
         job = FigureJob(
@@ -52,16 +54,32 @@ class TestOpenAIFigureRunnerBasics:
         )
         assert runner.generate(job) is False
 
-    def test_config_loading(self, tmp_path: Path) -> None:
-        """TOML config is parsed correctly (TOML 配置正确解析)."""
+    def test_config_loading_flat(self, tmp_path: Path) -> None:
+        """Flat TOML config is parsed correctly (平铺格式 TOML 配置正确解析)."""
         config = tmp_path / "test.toml"
         config.write_text(
-            '[nanobanana]\napi_key = "sk-test"\napi_base_url = "https://example.com"\n',
+            'api_key = "sk-test"\napi_base_url = "https://example.com"\nmodel = "gpt-image-1"\n',
             encoding="utf-8",
         )
         result = OpenAIFigureRunner._load_config(config)
         assert result["api_key"] == "sk-test"
         assert result["api_base_url"] == "https://example.com"
+
+    def test_config_loading_profiles(self, tmp_path: Path) -> None:
+        """[[models]] profiles are parsed and selected by name (按 name 选择 profile)."""
+        config = tmp_path / "test.toml"
+        config.write_text(
+            '[[models]]\nname = "a"\napi_key = "sk-a"\napi_base_url = "https://a.com"\nmodel = "model-a"\n'
+            '[[models]]\nname = "b"\napi_key = "sk-b"\napi_base_url = "https://b.com"\nmodel = "model-b"\n',
+            encoding="utf-8",
+        )
+        result_a = OpenAIFigureRunner._load_config(config, model_name="a")
+        assert result_a["api_key"] == "sk-a"
+        result_b = OpenAIFigureRunner._load_config(config, model_name="b")
+        assert result_b["api_key"] == "sk-b"
+        # Default: first profile (默认使用第一个)
+        result_default = OpenAIFigureRunner._load_config(config)
+        assert result_default["api_key"] == "sk-a"
 
     def test_config_missing_raises(self, tmp_path: Path) -> None:
         """Missing config file raises FileNotFoundError (配置不存在抛异常)."""

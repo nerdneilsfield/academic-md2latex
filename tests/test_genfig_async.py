@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+import pytest
+
 from wenqiao.genfig import (
     FigureJob,
     FigureRunner,
@@ -186,11 +188,17 @@ class TestOpenAIRunnerAsync:
 
         assert "async_generate" in OpenAIFigureRunner.__dict__
 
-    def test_async_generate_returns_false_without_auth(self, tmp_path: Path) -> None:
+    def test_async_generate_returns_false_without_auth(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """async_generate returns False when no auth configured (无认证信息时返回 False)."""
         import os
 
+        import wenqiao.genfig_openai as _mod
         from wenqiao.genfig_openai import OpenAIFigureRunner
+
+        # Prevent default config from providing credentials (屏蔽默认配置文件)
+        monkeypatch.setattr(_mod, "_DEFAULT_CONFIG", str(tmp_path / "no.toml"))
 
         runner = OpenAIFigureRunner()  # No api_key, no config, no env vars set
         job = FigureJob(
