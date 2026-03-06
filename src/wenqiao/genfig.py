@@ -297,7 +297,13 @@ async def run_generate_figures_async(
 
         # Writeback ai-done to source file (写回 ai-done 到源文件)
         if writeback and job.source_file is not None and job.label:
-            _write_ai_done(job.source_file, job.label)
+            try:
+                _write_ai_done(job.source_file, job.label)
+            except OSError as exc:
+                # Writeback failure should not retroactively mark generation as failed
+                # (写回失败不应把已成功的生成标记为失败)
+                if echo:
+                    echo(f"[generate-figures] warn: writeback failed for {job.label}: {exc}")
 
         return True
 

@@ -162,3 +162,16 @@ class TestWriteAiDone:
         runner = _FakeRunner()
         asyncio.run(run_generate_figures_async([job], runner, writeback=False))
         assert "ai-done" not in src.read_text(encoding="utf-8")
+
+    def test_writeback_failure_does_not_count_as_fail(self, tmp_path: Path) -> None:
+        """Writeback OSError does not mark successful generation as fail (写回错误不计入失败)."""
+        job = _make_job(tmp_path, label="fig:safe")
+        # Set source_file to a path that does not exist (设置不存在的源文件路径)
+        job.source_file = tmp_path / "nonexistent.mid.md"
+        runner = _FakeRunner()
+        success, fail = asyncio.run(
+            run_generate_figures_async([job], runner, writeback=True)
+        )
+        # Generation succeeded, writeback warned — not a fail (生成成功，写回警告，不计失败)
+        assert success == 1
+        assert fail == 0
