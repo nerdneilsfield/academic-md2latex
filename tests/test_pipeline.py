@@ -90,12 +90,13 @@ def test_inject_metadata_latex() -> None:
 
 
 def test_inject_metadata_html() -> None:
-    """HTML target injects 4 metadata keys (HTML 目标注入 4 个元数据键)."""
+    """HTML target injects html-facing metadata keys (HTML 目标注入 HTML 元数据键)."""
     doc = Document()
     cfg = WenqiaoConfig(title="Test", author="A")
     inject_metadata(doc, cfg, "html")
     assert doc.metadata["title"] == "Test"
     assert doc.metadata["author"] == "A"
+    assert "html_image_max_width" in doc.metadata
     assert "documentclass" not in doc.metadata
 
 

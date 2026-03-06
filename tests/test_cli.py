@@ -404,6 +404,60 @@ def test_html_config_title_injected(tmp_path: Path) -> None:
     assert "<title>My HTML Title</title>" in content
 
 
+def test_html_with_bib_formats_citation_entry(tmp_path: Path) -> None:
+    """HTML bibliography entry is resolved from --bib (HTML 参考文献从 --bib 解析)."""
+    src = tmp_path / "t.mid.md"
+    src.write_text("# Intro\n\nSee [S](cite:smith2024).\n")
+    bib = tmp_path / "refs.bib"
+    bib.write_text(
+        "@article{smith2024,\n"
+        "  author={Smith, John and Doe, Jane},\n"
+        "  title={Test Title},\n"
+        "  journal={IEEE T-RO},\n"
+        "  year={2024}\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "out.html"
+    result = CliRunner().invoke(
+        main,
+        [str(src), "-t", "html", "--bib", str(bib), "-o", str(out)],
+    )
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert 'id="cite-smith2024"' in content
+    assert "J. Smith" in content
+    assert "Test Title" in content
+
+
+def test_html_uses_bibliography_directive_without_bib_option(tmp_path: Path) -> None:
+    """HTML falls back to <!-- bibliography: ... --> when --bib omitted."""
+    src = tmp_path / "t.mid.md"
+    src.write_text(
+        "<!-- bibliography: refs.bib -->\n\n"
+        "# Intro\n\n"
+        "See [S](cite:smith2024).\n",
+        encoding="utf-8",
+    )
+    bib = tmp_path / "refs.bib"
+    bib.write_text(
+        "@article{smith2024,\n"
+        "  author={Smith, John},\n"
+        "  title={Directive Title},\n"
+        "  journal={T-RO},\n"
+        "  year={2024}\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "out.html"
+    result = CliRunner().invoke(main, [str(src), "-t", "html", "-o", str(out)])
+    assert result.exit_code == 0
+    content = out.read_text()
+    assert "Directive Title" in content
+    # Should not fall back to raw key in bibliography item text.
+    assert '<li id="cite-smith2024">smith2024</li>' not in content
+
+
 def test_invalid_target_exits_before_side_effects(tmp_path: Path) -> None:
     """Invalid target from config exits before generate-figures runs.
 
