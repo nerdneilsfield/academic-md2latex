@@ -248,7 +248,8 @@ class LaTeXRenderer(LaTeXBlockMixin):
             return f"{text}\n\n"
 
         h = cast(Heading, node)
-        # Apply per-document offset so shallowest heading → \section (应用偏移使最浅标题对齐 \section)
+        # Apply per-document offset so shallowest heading → \section
+        # (应用偏移使最浅标题对齐 \section)
         effective_level = h.level - self._heading_offset
         cmd = _HEADING_CMDS.get(effective_level, "subparagraph")
         text = self.render_children(node)

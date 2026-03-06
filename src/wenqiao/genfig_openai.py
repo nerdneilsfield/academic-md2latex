@@ -21,8 +21,8 @@ _DEFAULT_CONFIG = "~/.config/skiils.toml"
 # Default model name (默认模型名)
 _DEFAULT_MODEL = "nano-banana-pro"
 
-# Parameters that belong to the Images API — embed into prompt instead of passing to chat.completions
-# (图片 API 专属参数 — 嵌入 prompt，不传给 chat.completions)
+# Parameters that belong to the Images API — embed into prompt instead of passing to
+# chat.completions (图片 API 专属参数 — 嵌入 prompt，不传给 chat.completions)
 _IMAGES_API_ONLY_PARAMS: frozenset[str] = frozenset({"size", "quality", "style", "n"})
 
 
@@ -79,7 +79,8 @@ class OpenAIFigureRunner(FigureRunner):
             sys.stderr.write(f"Missing dependency: openai ({exc}).\n")
             return False
 
-        # Separate chat-compatible params from Images-API-only ones (分离 chat 参数与图片 API 专属参数)
+        # Separate chat-compatible params from Images-API-only ones
+        # (分离 chat 参数与图片 API 专属参数)
         extra_params: dict[str, Any] = {}
         prompt_suffix: list[str] = []
         for k, v in (job.params or {}).items():
@@ -127,7 +128,8 @@ class OpenAIFigureRunner(FigureRunner):
             sys.stderr.write(f"Missing dependency: openai ({exc}).\n")
             return False
 
-        # Separate chat-compatible params from Images-API-only ones (分离 chat 参数与图片 API 专属参数)
+        # Separate chat-compatible params from Images-API-only ones
+        # (分离 chat 参数与图片 API 专属参数)
         extra_params: dict[str, Any] = {}
         prompt_suffix: list[str] = []
         for k, v in (job.params or {}).items():

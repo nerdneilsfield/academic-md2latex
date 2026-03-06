@@ -31,7 +31,10 @@ from wenqiao.pipeline import parse_and_process
 @click.option(
     "--model",
     default=None,
-    help="Select model profile by name from [[models]] in config (从配置 [[models]] 中按 name 选择 profile)",
+    help=(
+        "Select model profile by name from [[models]] in config "
+        "(从配置 [[models]] 中按 name 选择 profile)"
+    ),
 )
 @click.option(
     "--base-url",

@@ -422,7 +422,10 @@ class LaTeXBlockMixin:
         current_len = 0
         for word in words:
             # +1 for the space separator between words (词间空格)
-            new_len = current_len + self._display_width(self._strip_latex_for_width(word)) + (1 if current else 0)
+            space_width = 1 if current else 0
+            new_len = current_len + self._display_width(
+                self._strip_latex_for_width(word)
+            ) + space_width
             if new_len > limit and current:
                 lines.append(" ".join(current))
                 current = [word]

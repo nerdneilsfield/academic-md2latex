@@ -69,8 +69,10 @@ class TestOpenAIFigureRunnerBasics:
         """[[models]] profiles are parsed and selected by name (按 name 选择 profile)."""
         config = tmp_path / "test.toml"
         config.write_text(
-            '[[models]]\nname = "a"\napi_key = "sk-a"\napi_base_url = "https://a.com"\nmodel = "model-a"\n'
-            '[[models]]\nname = "b"\napi_key = "sk-b"\napi_base_url = "https://b.com"\nmodel = "model-b"\n',
+            '[[models]]\nname = "a"\napi_key = "sk-a"\n'
+            'api_base_url = "https://a.com"\nmodel = "model-a"\n'
+            '[[models]]\nname = "b"\napi_key = "sk-b"\n'
+            'api_base_url = "https://b.com"\nmodel = "model-b"\n',
             encoding="utf-8",
         )
         result_a = OpenAIFigureRunner._load_config(config, model_name="a")
