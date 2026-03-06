@@ -91,7 +91,26 @@ class LaTeXRenderer(LaTeXBlockMixin):
         self.locale = locale
         self._fn_defs: dict[str, Node] = {}  # footnote defs by id (按 ID 索引的脚注定义)
         self._expanding_fn_refs: set[str] = set()  # circular expansion guard (循环展开守卫)
+        self._heading_offset: int = 0  # set per-document in render_document (每文档计算)
         self.diag = diag
+
+    @staticmethod
+    def _compute_heading_offset(doc: Node) -> int:
+        """Return offset so the shallowest heading maps to \\section (level 1).
+
+        最浅标题级别对齐到 \\section 的偏移量（offset = min_level - 1）。
+        """
+        min_level: int = 99
+        stack = list(doc.children)
+        while stack:
+            n = stack.pop()
+            if isinstance(n, Heading):
+                if n.level < min_level:
+                    min_level = n.level
+            stack.extend(n.children)
+        if min_level == 99:
+            return 0
+        return min_level - 1  # e.g. min_level=2 → offset=1 → h2 renders as \section
 
     def render(self, node: Node) -> str:
         """渲染节点为 LaTeX 字符串（Render node to LaTeX string）."""
@@ -131,6 +150,9 @@ class LaTeXRenderer(LaTeXBlockMixin):
         self._expanding_fn_refs.clear()  # Reset circular expansion guard (重置循环展开守卫)
         # Pre-scan: collect all FootnoteDef nodes (预扫描：收集所有脚注定义)
         self._collect_footnote_defs(node)
+        # Auto-detect minimum heading level to normalize top level to \section.
+        # (自动检测最小标题级别，确保最高层标题渲染为 \section)
+        self._heading_offset = self._compute_heading_offset(node)
         body = self.render_children(node)
 
         if self.mode in ("body", "fragment"):
@@ -219,7 +241,9 @@ class LaTeXRenderer(LaTeXBlockMixin):
             return f"{text}\n\n"
 
         h = cast(Heading, node)
-        cmd = _HEADING_CMDS.get(h.level, "subparagraph")
+        # Apply per-document offset so shallowest heading → \section (应用偏移使最浅标题对齐 \section)
+        effective_level = h.level - self._heading_offset
+        cmd = _HEADING_CMDS.get(effective_level, "subparagraph")
         text = self.render_children(node)
         result = f"\\{cmd}{{{text}}}\n"
         if label := node.metadata.get("label"):

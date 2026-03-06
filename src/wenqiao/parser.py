@@ -45,7 +45,8 @@ from wenqiao.nodes import (
 
 def _create_md() -> MarkdownIt:
     md = MarkdownIt("commonmark", {"html": True}).enable("table")
-    dollarmath_plugin(md)
+    # allow_blank_lines: treat $\n...\n$ as inline math (允许换行的内联数学)
+    dollarmath_plugin(md, allow_blank_lines=True)
     footnote_plugin(md)
     return md
 
