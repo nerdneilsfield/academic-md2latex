@@ -46,9 +46,10 @@ graph LR
 
 - **多目标输出** — LaTeX (`.tex`)、富 Markdown (`.md`) 和带 MathJax 的 HTML
 - **8 种引用命令** — `cite`、`citep`、`citet`、`citeauthor`、`citeyear`、`textcite`、
-  `parencite`、`autocite`，支持 BibTeX 文件解析
+  `parencite`、`autocite`，支持 BibTeX 文件解析；也支持裸 `[cite:key]` 速记
 - **数学公式** — 行内 `$...$` 与行间 `$$...$$`，支持标签和方程环境
-- **交叉引用** — 标签和引用在不同目标中自动转换为 `\ref{}` / `<a href>` / `{#id}`
+- **交叉引用** — 标签和引用在不同目标中自动转换为 `\ref{}` / `<a href>` / `{#id}`；
+  也支持裸 `[ref:label]` 速记
 - **图表** — 通过 HTML 注释指令设置 caption、label、width、placement；
   图注/表注支持行内 `[text](ref:label)` / `[text](cite:key)` 标记
 - **智能表格排版** — 过宽时自动插入 `\scalebox`，长单元格用 `\makecell[lt]` 分行，
@@ -613,6 +614,16 @@ print(f"共找到 {len(all_keys)} 个唯一引用键")
 如 [Smith](citeauthor:smith2023) 所述……
 ```
 
+也支持裸引用速记：
+
+```markdown
+[cite:wang2024]
+[cite:wang2024?cmd=citet]
+[cite:a,b,c]
+```
+
+它们的行为等价于“空显示文本”的引用，最终映射到同样的引用命令。
+
 | wenqiao 语法 | LaTeX 输出 | HTML 输出 |
 |-------------|-----------|-----------|
 | `[text](cite:key)` | `\cite{key}` | `<sup><a href="#cite-key">[1]</a></sup>` |
@@ -631,7 +642,10 @@ print(f"共找到 {len(all_keys)} 个唯一引用键")
 <!-- label: sec:intro -->
 
 详见 [第1节](ref:sec:intro)。
+[ref:sec:intro]
 ```
+
+裸 `ref` 速记在 Markdown/HTML 输出中默认直接显示 label 本身。
 
 | 目标 | 输出 |
 |------|------|
@@ -770,6 +784,8 @@ ICP   & 85.3 & RMSE \\
 \end{table}
 <!-- end: raw -->
 ```
+
+原始透传块也会按原样保留数学定界符，包括行内 `$...$` 和行间 `$$...$$`。
 
 在 `packages` 中添加 `booktabs` 即可使用 `\toprule`、`\midrule`、`\bottomrule`。
 
