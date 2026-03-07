@@ -107,6 +107,36 @@ def test_begin_end_raw_preserves_latex_row_separators() -> None:
     )
 
 
+def test_begin_end_raw_preserves_display_math_delimiters() -> None:
+    """raw 块保留 $$ 数学定界符（raw block preserves $$ math delimiters）."""
+    text = (
+        "<!-- begin: raw -->\n"
+        "$$\n"
+        "a^2 + b^2 = c^2\n"
+        "$$\n"
+        "<!-- end: raw -->\n"
+    )
+    doc = parse(text)
+    east = process_comments(doc, "test.md")
+    raws = [c for c in east.children if isinstance(c, RawBlock)]
+    assert len(raws) == 1
+    assert raws[0].content == "$$\na^2 + b^2 = c^2\n$$"
+
+
+def test_begin_end_raw_preserves_inline_math_delimiters() -> None:
+    """raw 块保留 $ 数学定界符（raw block preserves $ math delimiters）."""
+    text = (
+        "<!-- begin: raw -->\n"
+        "$a^2 + b^2 = c^2$\n"
+        "<!-- end: raw -->\n"
+    )
+    doc = parse(text)
+    east = process_comments(doc, "test.md")
+    raws = [c for c in east.children if isinstance(c, RawBlock)]
+    assert len(raws) == 1
+    assert raws[0].content == "$a^2 + b^2 = c^2$"
+
+
 def test_document_directive_after_content_ignored():
     text = "# Intro\n<!-- title: Late Title -->\n"
     doc = parse(text)

@@ -11,6 +11,8 @@ from wenqiao.diagnostic import DiagCollector
 from wenqiao.nodes import (
     Environment,
     HardBreak,
+    MathBlock,
+    MathInline,
     Node,
     Paragraph,
     RawBlock,
@@ -169,6 +171,14 @@ def _extract_raw_content(nodes: list[Node]) -> str:
     for node in nodes:
         if isinstance(node, RawBlock):
             parts.append(node.content)
+        elif isinstance(node, MathBlock):
+            # Preserve display-math delimiters inside raw blocks.
+            # (在 raw 块中保留行间数学的 $$ 定界符。)
+            parts.append(f"$$\n{node.content}\n$$")
+        elif isinstance(node, MathInline):
+            # Preserve inline-math delimiters inside raw blocks.
+            # (在 raw 块中保留行内数学的 $ 定界符。)
+            parts.append(f"${node.content}$")
         elif isinstance(node, Paragraph):
             parts.append(_text_from_paragraph(node))
         elif hasattr(node, "content"):
@@ -209,6 +219,10 @@ def _text_from_paragraph(para: Paragraph) -> str:
                 parts.append("\\\\\n")
             elif isinstance(child, SoftBreak):
                 _append_softbreak()
+            elif isinstance(child, MathInline):
+                # Preserve inline-math delimiters when flattening raw paragraphs.
+                # (压平 raw 段落时保留行内数学的 $ 定界符。)
+                parts.append(f"${child.content}$")
             elif hasattr(child, "content"):
                 parts.append(child.content)
             elif hasattr(child, "children"):
