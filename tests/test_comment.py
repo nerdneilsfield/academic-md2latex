@@ -137,6 +137,40 @@ def test_begin_end_raw_preserves_inline_math_delimiters() -> None:
     assert raws[0].content == "$a^2 + b^2 = c^2$"
 
 
+def test_begin_end_raw_preserves_inline_markdown_syntax() -> None:
+    """raw 块保留行内 Markdown 语法（raw block preserves inline Markdown syntax）."""
+    text = (
+        "<!-- begin: raw -->\n"
+        "{*x*}\n"
+        "[a](b)\n"
+        "*y*\n"
+        "<!-- end: raw -->\n"
+    )
+    doc = parse(text)
+    east = process_comments(doc, "test.md")
+    raws = [c for c in east.children if isinstance(c, RawBlock)]
+    assert len(raws) == 1
+    assert raws[0].content == "{*x*}\n[a](b)\n*y*"
+
+
+def test_begin_end_raw_preserves_blank_lines() -> None:
+    """raw 块保留内部空行（raw block preserves internal blank lines）."""
+    text = (
+        "<!-- begin: raw -->\n"
+        "line1\n"
+        "\n"
+        "$x$\n"
+        "\n"
+        "*y*\n"
+        "<!-- end: raw -->\n"
+    )
+    doc = parse(text)
+    east = process_comments(doc, "test.md")
+    raws = [c for c in east.children if isinstance(c, RawBlock)]
+    assert len(raws) == 1
+    assert raws[0].content == "line1\n\n$x$\n\n*y*"
+
+
 def test_document_directive_after_content_ignored():
     text = "# Intro\n<!-- title: Late Title -->\n"
     doc = parse(text)
@@ -152,6 +186,16 @@ def test_unmatched_begin_raises():
     dc = DiagCollector("test.md")
     process_comments(doc, "test.md", diag=dc)
     assert dc.has_errors
+
+
+def test_unmatched_raw_begin_still_triggers_error() -> None:
+    """未配对 raw begin 仍触发原有错误（Unmatched raw begin still triggers original error）."""
+    text = "<!-- begin: raw -->\n*x*\n"
+    doc = parse(text)
+    dc = DiagCollector("test.md")
+    process_comments(doc, "test.md", diag=dc)
+    assert dc.has_errors
+    assert any("Unmatched <!-- begin: raw -->" in d.message for d in dc.errors)
 
 
 # ── Task 1: Stack-based begin/end matching ────────────────────────────────────

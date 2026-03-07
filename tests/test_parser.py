@@ -62,6 +62,67 @@ def test_math_block():
     assert "\\int" in math_nodes[0].content
 
 
+def test_parse_matched_raw_block_bypasses_inline_parsing() -> None:
+    """Matched raw block is restored as literal RawBlock (匹配的 raw 块恢复为字面 RawBlock)."""
+    text = (
+        "<!-- begin: raw -->\n"
+        "{*x*}\n"
+        "[a](b)\n"
+        "$a+b$\n"
+        "<!-- end: raw -->\n"
+    )
+    doc = parse(text)
+    raws = [c for c in doc.children if isinstance(c, RawBlock)]
+    assert len(raws) == 1
+    assert raws[0].content == "{*x*}\n[a](b)\n$a+b$"
+
+
+def test_parse_multiple_raw_blocks_restored_in_order() -> None:
+    """Multiple raw blocks are restored in source order (多个 raw 块按源码顺序恢复)."""
+    text = (
+        "<!-- begin: raw -->\n"
+        "*a*\n"
+        "<!-- end: raw -->\n"
+        "\n"
+        "Middle\n"
+        "\n"
+        "<!-- begin: raw -->\n"
+        "[b](c)\n"
+        "<!-- end: raw -->\n"
+    )
+    doc = parse(text)
+    raws = [c for c in doc.children if isinstance(c, RawBlock)]
+    assert len(raws) == 2
+    assert raws[0].content == "*a*"
+    assert raws[1].content == "[b](c)"
+
+
+def test_parse_nested_raw_block_preserves_inner_markers() -> None:
+    """Nested raw markers stay literal inside outer raw block.
+
+    嵌套 raw 标记在外层 raw 中保持字面值。
+    """
+    text = (
+        "<!-- begin: raw -->\n"
+        "outer\n"
+        "<!-- begin: raw -->\n"
+        "*inner*\n"
+        "<!-- end: raw -->\n"
+        "tail\n"
+        "<!-- end: raw -->\n"
+    )
+    doc = parse(text)
+    raws = [c for c in doc.children if isinstance(c, RawBlock)]
+    assert len(raws) == 1
+    assert raws[0].content == (
+        "outer\n"
+        "<!-- begin: raw -->\n"
+        "*inner*\n"
+        "<!-- end: raw -->\n"
+        "tail"
+    )
+
+
 def test_unordered_list():
     doc = parse("- a\n- b\n")
     lst = doc.children[0]

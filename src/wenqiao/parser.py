@@ -71,6 +71,10 @@ VALID_CITE_CMDS = frozenset(
 # Bare shortcut syntax inside text nodes, e.g. [cite:key] / [ref:label].
 # (文本节点中的裸速记语法，例如 [cite:key] / [ref:label]。)
 _BARE_SHORTCUT_RE = re.compile(r"\[(cite|ref):([^\]]*)\]")
+_RAW_BEGIN_LINE_RE = re.compile(r"^[ \t]*<!--\s*begin\s*:\s*raw\s*-->[ \t]*(?:\r?\n)?$")
+_RAW_END_LINE_RE = re.compile(r"^[ \t]*<!--\s*end\s*:\s*raw\s*-->[ \t]*(?:\r?\n)?$")
+_RAW_PLACEHOLDER_PREFIX = "__WENQIAO_RAW_BLOCK_"
+_RAW_PLACEHOLDER_RE = re.compile(r"^<!--\s*__WENQIAO_RAW_BLOCK_(\d+)__\s*-->$")
 
 
 def parse(text: str, *, diag: DiagCollector | None = None) -> Document:
@@ -85,10 +89,13 @@ def parse(text: str, *, diag: DiagCollector | None = None) -> Document:
     Returns:
         EAST Document node (EAST 文档节点)
     """
-    tokens = _md.parse(text)
+    shielded_text, raw_blocks = _shield_raw_blocks(text)
+    tokens = _md.parse(shielded_text)
     tree = SyntaxTreeNode(tokens)
     children = _build_children(tree)
     doc = Document(children=children)
+    if raw_blocks:
+        _restore_raw_placeholders(doc, raw_blocks)
     if diag is not None:
         _validate_citations(doc, diag)
     return doc
@@ -152,6 +159,131 @@ def _position_from_map(node: SyntaxTreeNode) -> dict[str, object] | None:
     if m is None:
         return None
     return {"start": {"line": m[0] + 1, "column": 1}, "end": {"line": m[1], "column": 1}}
+
+
+def _shield_raw_blocks(text: str) -> tuple[str, list[str]]:
+    """Shield matched raw blocks before Markdown parsing.
+
+    在 Markdown 解析前屏蔽已匹配的 raw 块。
+    Matched raw blocks become multiline HTML comment placeholders with the same
+    line layout, so later node positions remain stable.
+    （已匹配的 raw 块会被替换为保持相同行布局的多行 HTML 注释占位符，
+    以保证后续节点位置稳定。）
+    """
+    lines = text.splitlines(keepends=True)
+    if not lines:
+        return text, []
+
+    raw_blocks: list[str] = []
+    output: list[str] = []
+    i = 0
+    while i < len(lines):
+        if not _RAW_BEGIN_LINE_RE.match(lines[i]):
+            output.append(lines[i])
+            i += 1
+            continue
+
+        depth = 1
+        j = i + 1
+        while j < len(lines):
+            if _RAW_BEGIN_LINE_RE.match(lines[j]):
+                depth += 1
+            elif _RAW_END_LINE_RE.match(lines[j]):
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+
+        if depth != 0:
+            output.append(lines[i])
+            i += 1
+            continue
+
+        raw_blocks.append(_normalize_raw_block_content("".join(lines[i + 1 : j])))
+        output.append(_make_raw_placeholder(len(raw_blocks) - 1, lines[i : j + 1]))
+        i = j + 1
+
+    return "".join(output), raw_blocks
+
+
+def _normalize_raw_block_content(content: str) -> str:
+    """Normalize raw block payload to existing newline semantics.
+
+    归一化 raw 块内容，保持与现有实现一致的换行语义。
+    """
+    if content.endswith("\r\n"):
+        return content[:-2]
+    if content.endswith("\n") or content.endswith("\r"):
+        return content[:-1]
+    return content
+
+
+def _make_raw_placeholder(index: int, consumed_lines: list[str]) -> str:
+    """Build a multiline placeholder comment with preserved line endings.
+
+    构造带占位符的多行注释，并保留原始行尾。
+    """
+    token = f"{_RAW_PLACEHOLDER_PREFIX}{index}__"
+    if len(consumed_lines) == 1:
+        _, ending = _split_line_ending(consumed_lines[0])
+        return f"<!-- {token} -->{ending}"
+
+    parts: list[str] = []
+    for line_index, line in enumerate(consumed_lines):
+        _, ending = _split_line_ending(line)
+        if line_index == 0:
+            parts.append(f"<!-- {token}{ending}")
+        elif line_index == len(consumed_lines) - 1:
+            parts.append(f"-->{ending}")
+        else:
+            parts.append(ending)
+    return "".join(parts)
+
+
+def _split_line_ending(line: str) -> tuple[str, str]:
+    """Split a line into body and trailing line ending.
+
+    将单行拆分为正文和结尾换行符。
+    """
+    if line.endswith("\r\n"):
+        return line[:-2], "\r\n"
+    if line.endswith("\n"):
+        return line[:-1], "\n"
+    if line.endswith("\r"):
+        return line[:-1], "\r"
+    return line, ""
+
+
+def _restore_raw_placeholders(doc: Document, raw_blocks: list[str]) -> None:
+    """Restore raw placeholders back to literal RawBlock nodes.
+
+    将 raw 占位符恢复为字面 RawBlock 节点。
+    """
+
+    def _restore_children(children: list[Node]) -> None:
+        for index, child in enumerate(children):
+            restored = _restore_raw_placeholder(child, raw_blocks)
+            if restored is not None:
+                children[index] = restored
+                continue
+            if child.children:
+                _restore_children(child.children)
+
+    _restore_children(doc.children)
+
+
+def _restore_raw_placeholder(node: Node, raw_blocks: list[str]) -> RawBlock | None:
+    """Restore a single placeholder comment if it is a raw placeholder.
+
+    如节点是 raw 占位符注释，则恢复单个占位符。
+    """
+    if not isinstance(node, RawBlock) or node.kind != "html":
+        return None
+    match = _RAW_PLACEHOLDER_RE.match(node.content)
+    if match is None:
+        return None
+    raw_index = int(match.group(1))
+    return RawBlock(content=raw_blocks[raw_index], kind="latex", position=node.position)
 
 
 # -- 块级构建器 --------------------------------------------------------------
