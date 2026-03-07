@@ -407,6 +407,12 @@ Insert verbatim LaTeX that passes through untouched:
 <!-- end: raw -->
 ```
 
+Raw blocks preserve LaTeX content verbatim, including math delimiters such as
+inline `$...$`, display `$$...$$`, and table row separators `\\`.
+
+原始 LaTeX 块会按原样保留内容，包括行内 `$...$`、行间 `$$...$$` 数学定界符，
+以及表格行分隔符 `\\`。
+
 ---
 
 ## 15. Include TeX / 引入外部 TeX 文件

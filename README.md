@@ -48,9 +48,10 @@ graph LR
 
 - **Multi-target output** — LaTeX (`.tex`), rich Markdown (`.md`), and HTML with MathJax
 - **8 citation commands** — `cite`, `citep`, `citet`, `citeauthor`, `citeyear`, `textcite`,
-  `parencite`, `autocite` with BibTeX file parsing
+  `parencite`, `autocite` with BibTeX file parsing; also supports bare `[cite:key]` shortcuts
 - **Math** — inline `$...$` and display `$$...$$` with labels and equation environments
-- **Cross-references** — labels and refs that become `\ref{}` / `<a href>` / `{#id}` per target
+- **Cross-references** — labels and refs that become `\ref{}` / `<a href>` / `{#id}` per target;
+  also supports bare `[ref:label]` shortcuts
 - **Figures & tables** — caption, label, width, placement via HTML comment directives;
   table captions support inline `[text](ref:label)` / `[text](cite:key)` markup
 - **Smart table layout** — auto-scales wide tables with `\scalebox`, wraps long cells with
@@ -639,6 +640,16 @@ Classical methods [1](citep:fischler1981) have limitations.
 As [Smith](citeauthor:smith2023) demonstrated ...
 ```
 
+Bare citation shortcuts are also supported:
+
+```markdown
+[cite:wang2024]
+[cite:wang2024?cmd=citet]
+[cite:a,b,c]
+```
+
+They behave like empty-display citations and map to the same citation commands.
+
 | wenqiao Syntax | LaTeX Output | HTML Output |
 |---------------|-------------|-------------|
 | `[text](cite:key)` | `\cite{key}` | `<sup><a href="#cite-key">[1]</a></sup>` |
@@ -657,7 +668,10 @@ As [Smith](citeauthor:smith2023) demonstrated ...
 <!-- label: sec:intro -->
 
 See [Section 1](ref:sec:intro) for details.
+[ref:sec:intro]
 ```
+
+Bare ref shortcuts use the label itself as display text in Markdown/HTML output.
 
 | Target | Output |
 |--------|--------|
@@ -796,6 +810,9 @@ Ours  & 93.1 & RMSE \\
 \end{table}
 <!-- end: raw -->
 ```
+
+Raw passthrough also preserves math delimiters verbatim, including inline `$...$`
+and display `$$...$$` spans inside the raw block.
 
 Add `booktabs` to your packages list to use `\toprule`, `\midrule`, `\bottomrule`.
 
