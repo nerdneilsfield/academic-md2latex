@@ -17,7 +17,7 @@ LATEX_ESCAPE_MAP = {
     "_": r"\_",
     "{": r"\{",
     "}": r"\}",
-    "~": r"\textasciitilde{}",
+    "~": "~",  # LaTeX non-breaking space (tie), not a literal tilde
     "^": r"\textasciicircum{}",
     "\\": r"\textbackslash{}",
 }
